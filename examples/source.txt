@@ -1,0 +1,36 @@
+let variable = 6
+let variable2 = 7
+
+int function() {
+    return 0
+}
+
+print("Hello!")
+
+class Something {
+    int a
+    int b
+    int c
+
+    void method() {
+        // do nothing
+    }
+}
+
+/*
+    Block comment
+*/
+
+// Line comment
+
+let variable3 = variable + variable2
+variable3 ++
+variable3++
+variable3 += 7
+
+void methodArgs(int a, int b, int c) {
+}
+
+let f = 12.0
+methodArgs(1, 2, 3)
+methodArgs(1,2,3)
