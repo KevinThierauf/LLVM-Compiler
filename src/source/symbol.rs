@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 
 use once_cell::sync::Lazy;
@@ -226,16 +226,21 @@ pub enum SymbolType {
     Number,
     Keyword(Keyword),
     Comment(FileRange),
-    CommaList(Vec<Symbol>),
+    CommaList(Vec<Vec<Symbol>>),
     String(QuoteType, FileRange),
     Parenthesis(ParenthesisType, Vec<Symbol>),
     Operator(Operator),
 }
 
-#[derive(Debug)]
 pub struct Symbol {
     symbolType: Box<SymbolType>,
     sourceRange: FileRange,
+}
+
+impl Debug for Symbol {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return f.write_str(&format!("{:?}", self.symbolType));
+    }
 }
 
 impl Symbol {

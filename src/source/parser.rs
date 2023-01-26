@@ -260,8 +260,8 @@ impl ParenthesisSet {
 struct ParserSymbolVec {
     symbolVec: Vec<Symbol>,
     startIndex: FilePos,
-    nextSymbolComma: bool,
-    commaSymbolVec: Vec<Symbol>,
+    currentCommaVec: Vec<Symbol>,
+    commaSymbolVec: Vec<Vec<Symbol>>,
 }
 
 impl ParserSymbolVec {
@@ -269,7 +269,7 @@ impl ParserSymbolVec {
         return Self {
             symbolVec: Vec::new(),
             startIndex,
-            nextSymbolComma: false,
+            currentCommaVec: Vec::new(),
             commaSymbolVec: Vec::new(),
         };
     }
@@ -278,38 +278,40 @@ impl ParserSymbolVec {
         // currently unused ending ',' is allowed and ignored
         // e.g. 1, 2, 3,
         // vs   1, 2, 3
-        match self.commaSymbolVec.len() {
-            0 => {}
-            1 => self.symbolVec.append(&mut self.commaSymbolVec),
-            _ => {
-                let startIndex = self.startIndex.getIndex();
-                debug_assert!(startIndex <= nextCharacterIndex);
-                let mut commaSymbolVec = Vec::new();
-                commaSymbolVec.append(&mut self.commaSymbolVec);
-                self.symbolVec.push(Symbol::new(
-                    SymbolType::CommaList(commaSymbolVec),
-                    FileRange::new(self.startIndex.to_owned(), nextCharacterIndex - startIndex),
-                ));
-            }
-        };
+        if self.commaSymbolVec.is_empty() {
+            // no commas used
+            self.symbolVec.append(&mut self.currentCommaVec);
+            self.commaSymbolVec.clear();
+        } else {
+            let startIndex = self.startIndex.getIndex();
+            debug_assert!(startIndex <= nextCharacterIndex);
+            let mut currentCommaVec = Vec::new();
+            currentCommaVec.append(&mut self.currentCommaVec);
+
+            let mut commaSymbolVec = Vec::new();
+            commaSymbolVec.append(&mut self.commaSymbolVec);
+            commaSymbolVec.push(currentCommaVec);
+
+            self.symbolVec.push(Symbol::new(
+                SymbolType::CommaList(commaSymbolVec),
+                FileRange::new(self.startIndex.to_owned(), nextCharacterIndex - startIndex),
+            ));
+        }
+        debug_assert!(self.commaSymbolVec.is_empty());
+        debug_assert!(self.currentCommaVec.is_empty());
+    }
+
+    fn addComma(&mut self) {
+        let mut nextVec = Vec::new();
+        swap(&mut nextVec, &mut self.currentCommaVec);
+        self.commaSymbolVec.push(nextVec);
     }
 
     fn addSymbolRange(&mut self, symbolType: SymbolType, range: FileRange) {
-        if self.nextSymbolComma {
-            self.nextSymbolComma = false;
-        } else {
-            self.foldCommaVec(range.getEndIndex());
-        }
-        self.commaSymbolVec.push(Symbol::new(symbolType, range));
-    }
-
-    fn setCommaNext(&mut self) {
-        assert!(!self.nextSymbolComma);
-        self.nextSymbolComma = true;
+        self.currentCommaVec.push(Symbol::new(symbolType, range));
     }
 
     fn takeSymbolVec(mut self, nextCharacterIndex: usize) -> Vec<Symbol> {
-        debug_assert!(self.commaSymbolVec.is_empty());
         self.foldCommaVec(nextCharacterIndex);
         return self.symbolVec;
     }
@@ -363,9 +365,10 @@ impl Parser {
     }
 
     fn getNextChar(&mut self) -> Option<char> {
-        let index = self.nextCharacterIndex;
-        self.nextCharacterIndex += 1;
-        return self.sourceFile.getSource().as_bytes().get(index).map(|v| *v as char);
+        return self.sourceFile.getSource().as_bytes().get(self.nextCharacterIndex).map(|v| {
+            self.nextCharacterIndex += 1;
+            *v as char
+        });
     }
 
     fn peekNextChar(&self, value: char) -> bool {
@@ -382,8 +385,8 @@ impl Parser {
     }
 
     fn getFileRange(&self, range: Range<usize>) -> FileRange {
-        debug_assert!(range.end <= self.sourceFile.getLength());
-        debug_assert!(range.start <= range.end);
+        debug_assert!(range.end <= self.sourceFile.getLength(), "{} <= {}", range.end, self.sourceFile.getLength());
+        debug_assert!(range.start <= range.end, "{} <= {}", range.start, range.end);
         return FileRange::new(self.getFilePos(range.start), range.end - range.start);
     }
 
@@ -397,6 +400,7 @@ impl Parser {
 
     fn addSymbol(&mut self, symbolType: SymbolType) {
         self.parserVec.addSymbolRange(symbolType, self.getFileRange(self.lastSymbolStart..self.nextCharacterIndex));
+        self.resetToken();
         self.lastSymbolStart = self.nextCharacterIndex;
     }
 
@@ -427,8 +431,12 @@ impl Parser {
         }
     }
 
-    fn addToken(&mut self, token: Token) -> Result<(), ParseError> {
+    fn resetToken(&mut self) {
         self.tokenOption = TokenOption::new();
+        self.tokenStart = self.nextCharacterIndex;
+    }
+
+    fn addToken(&mut self, token: Token) -> Result<(), ParseError> {
         match token {
             Word => {
                 let tokenSource = self.getTokenSource();
@@ -454,7 +462,7 @@ impl Parser {
                 }
             }
         }
-        self.tokenStart = self.nextCharacterIndex;
+        debug_assert_eq!(self.tokenStart, self.nextCharacterIndex, "token not reset");
         return Ok(());
     }
 
@@ -486,12 +494,10 @@ impl Parser {
                 }
                 ',' => {
                     self.addTokenExcludeLastChar(true)?;
-                    if self.parserVec.nextSymbolComma {
-                        return Err(self.getErrorTokenRange(format!("multiple unexpected commas")));
-                    }
-                    self.parserVec.setCommaNext();
+                    self.parserVec.addComma();
                 }
                 '/' if self.peekNextChar('/') => {
+                    self.addTokenExcludeLastChar(false)?;
                     // line comment
                     let commentStart = self.tokenStart;
                     while let Some(character) = self.getNextChar() {
@@ -502,6 +508,7 @@ impl Parser {
                     self.addSymbol(SymbolType::Comment(self.getFileRange(commentStart..self.nextCharacterIndex)));
                 }
                 '/' if self.peekNextChar('*') => {
+                    self.addTokenExcludeLastChar(false)?;
                     // multi-line comment
                     let commentStart = self.tokenStart;
                     const FIRST: char = '*';
@@ -536,6 +543,7 @@ impl Parser {
                 }
                 // if let guards are currently unstable, call isQuoteChar/isOpenParenthesis/isCloseParenthesis twice with same parameters
                 _ if isQuoteChar(character).is_some() => {
+                    self.addTokenExcludeLastChar(false)?;
                     let quoteType = isQuoteChar(character).unwrap();
                     let startIndex = self.nextCharacterIndex;
                     loop {
@@ -553,12 +561,14 @@ impl Parser {
                         }
                     }
 
-                    self.addSymbol(SymbolType::String(quoteType, self.getFileRange(startIndex..lastCharacterIndex)));
+                    self.addSymbol(SymbolType::String(quoteType, self.getFileRange(startIndex..self.nextCharacterIndex)));
                 }
                 _ if isOpenParenthesis(character).is_some() => {
+                    self.addTokenExcludeLastChar(true)?;
                     self.parenthesisSet.push(lastCharacterIndex, &mut self.parserVec, isOpenParenthesis(character).unwrap());
                 }
                 c if isCloseParenthesis(character).is_some() => {
+                    self.addTokenExcludeLastChar(true)?;
                     let parenthesisType = isCloseParenthesis(character).unwrap();
                     match self.parenthesisSet.pop(parenthesisType) {
                         Ok((parentSymbolVec, openIndex)) => {
@@ -576,6 +586,7 @@ impl Parser {
                 }
                 ';' => {
                     self.addTokenExcludeLastChar(false)?;
+                    self.parserVec.foldCommaVec(self.nextCharacterIndex - 1);
                     self.addSymbol(SymbolType::SemiColan);
                 }
                 _ => return Err(self.getErrorTokenRange(format!("unexpected character {character}")))
