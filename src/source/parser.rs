@@ -428,12 +428,13 @@ impl Parser {
         return Ok(());
     }
 
+    #[inline(always)]
     fn isBasicTokenComplete(&mut self, token: BasicToken) -> bool {
         return match token {
             Number => {
                 let source = self.getBasicTokenSource().as_bytes();
                 let lastChar = source[source.len() - 1] as char;
-                isInnerNumberChar(lastChar) || lastChar == '.'
+                !(isInnerNumberChar(lastChar) || lastChar == '.')
             }
             Word | Operator => true,
         };
