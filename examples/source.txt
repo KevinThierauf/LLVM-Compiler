@@ -1,7 +1,10 @@
+structure.function()
+0..1
+
 let variable = 6
 let variable2 = 7
 
-int function() {
+int function(int... vars) {
     return 0
 }
 

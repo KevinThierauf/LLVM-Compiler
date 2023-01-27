@@ -65,6 +65,12 @@ pub enum Operator {
     Decrement,
     // !
     Not,
+    // .
+    Dot,
+    // ..
+    Range,
+    // ...
+    Ellipsis,
     // ?
     ErrorPropagation,
     // as type
@@ -112,21 +118,17 @@ pub enum Operator {
 impl Operator {
     pub fn getPrecedence(&self) -> i32 {
         return match self {
-            // 0
+            // assignment
             Operator::AssignEq | Operator::PlusAssign | Operator::MinusAssign | Operator::MultAssign | Operator::DivAssign | Operator::ModAssign => 0,
-            // 1
-            // 2
-            Operator::CompareEq | Operator::CompareNotEq | Operator::Greater | Operator::GreaterEq | Operator::Less | Operator::LessEq => 2,
-            // 3
-            Operator::And | Operator::Or => 3,
-            // 4
-            Operator::Plus | Operator::Minus => 4,
-            // 5
-            Operator::Mult | Operator::Div | Operator::Mod => 5,
-            // 8
-            Operator::Cast => 8,
-            // 10
-            Operator::Not | Operator::Increment | Operator::Decrement | Operator::ErrorPropagation => 10,
+            // boolean logic
+            Operator::And | Operator::Or => 2,
+            // comparison
+            Operator::CompareEq | Operator::CompareNotEq | Operator::Greater | Operator::GreaterEq | Operator::Less | Operator::LessEq => 3,
+            Operator::Range => 4,
+            Operator::Plus | Operator::Minus => 5,
+            Operator::Mult | Operator::Div | Operator::Mod => 6,
+            Operator::ErrorPropagation | Operator::Dot | Operator::Cast | Operator::Not | Operator::Increment | Operator::Decrement => 10,
+            Operator::Ellipsis => 20,
         };
     }
 
@@ -135,6 +137,9 @@ impl Operator {
             Operator::Increment => "++",
             Operator::Decrement => "--",
             Operator::Not => "!",
+            Operator::Dot => ".",
+            Operator::Range => "..",
+            Operator::Ellipsis => "...",
             Operator::ErrorPropagation => "?",
             Operator::Cast => "as",
             Operator::Plus => "+",
@@ -162,7 +167,7 @@ impl Operator {
     pub fn isKeywordOperator(&self) -> bool {
         return match self {
             Operator::And | Operator::Or | Operator::Cast => true,
-            Operator::Increment | Operator::Decrement | Operator::ErrorPropagation | Operator::Not | Operator::Plus | Operator::Minus | Operator::Mult | Operator::Div | Operator::Mod | Operator::PlusAssign | Operator::MinusAssign | Operator::MultAssign | Operator::DivAssign | Operator::ModAssign | Operator::Greater | Operator::Less | Operator::GreaterEq | Operator::LessEq | Operator::CompareEq | Operator::CompareNotEq | Operator::AssignEq => false,
+            Operator::Increment | Operator::Decrement | Operator::Not | Operator::Dot | Operator::Range | Operator::Ellipsis | Operator::ErrorPropagation | Operator::Plus | Operator::Minus | Operator::Mult | Operator::Div | Operator::Mod | Operator::PlusAssign | Operator::MinusAssign | Operator::MultAssign | Operator::DivAssign | Operator::ModAssign | Operator::Greater | Operator::Less | Operator::GreaterEq | Operator::LessEq | Operator::CompareEq | Operator::CompareNotEq | Operator::AssignEq => false,
         };
     }
 
@@ -179,7 +184,7 @@ impl Operator {
         return &MAP;
     }
 
-    pub fn getSymbolOperators() -> &'static HashMap<&'static str, Operator> {
+    pub fn getTokenOperators() -> &'static HashMap<&'static str, Operator> {
         static MAP: Lazy<HashMap<&'static str, Operator>> = Lazy::new(|| {
             let mut map = HashMap::new();
             for operator in Operator::iter() {
@@ -220,39 +225,39 @@ pub enum Keyword {
 }
 
 #[derive(Debug)]
-pub enum SymbolType {
+pub enum TokenType {
     Identifier,
     SemiColan,
     Number,
     Keyword(Keyword),
     Comment(FileRange),
-    CommaList(Vec<Vec<Symbol>>),
+    CommaList(Vec<Vec<Token>>),
     String(QuoteType, FileRange),
-    Parenthesis(ParenthesisType, Vec<Symbol>),
+    Parenthesis(ParenthesisType, Vec<Token>),
     Operator(Operator),
 }
 
-pub struct Symbol {
-    symbolType: Box<SymbolType>,
+pub struct Token {
+    tokenType: Box<TokenType>,
     sourceRange: FileRange,
 }
 
-impl Debug for Symbol {
+impl Debug for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        return f.write_str(&format!("{:?}", self.symbolType));
+        return f.write_str(&format!("{:?}", self.tokenType));
     }
 }
 
-impl Symbol {
-    pub fn new(symbolType: SymbolType, sourceRange: FileRange) -> Self {
+impl Token {
+    pub fn new(tokenType: TokenType, sourceRange: FileRange) -> Self {
         return Self {
-            symbolType: Box::new(symbolType),
+            tokenType: Box::new(tokenType),
             sourceRange,
         };
     }
 
-    pub fn getSymbolType(&self) -> &SymbolType {
-        return self.symbolType.deref();
+    pub fn getTokenType(&self) -> &TokenType {
+        return self.tokenType.deref();
     }
 
     pub fn getSourceRange(&self) -> &FileRange {
