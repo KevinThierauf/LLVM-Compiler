@@ -1,5 +1,8 @@
+use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::rc::Rc;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::Relaxed;
 use crate::module::modulepos::{ModulePos, ModuleRange};
 
 use crate::module::tokenparser::TokenParser;
@@ -11,14 +14,19 @@ pub mod symbol;
 pub mod modulepos;
 pub mod logger;
 pub mod typeinfo;
+pub mod resolutionselector;
+
+static MODULE_INDEX: AtomicUsize = AtomicUsize::new(0);
 
 pub struct Module {
+    moduleId: usize,
     tokenVec: Vec<Token>,
 }
 
 impl Module {
     pub fn new(tokenVec: Vec<Token>) -> Rc<Self> {
         let mut module = Self {
+            moduleId: MODULE_INDEX.fetch_add(1, Relaxed),
             tokenVec,
         };
         TokenParser::new(&mut module).parse();
@@ -46,5 +54,11 @@ impl Module {
             startPos,
             length: range.end - range.start,
         };
+    }
+}
+
+impl Hash for Module {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_usize(self.moduleId);
     }
 }

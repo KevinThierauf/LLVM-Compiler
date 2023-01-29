@@ -1,15 +1,14 @@
 use crate::module::modulepos::ModuleRange;
+use crate::module::resolutionselector::resolutionconstraint::ResolutionConstraintType;
+use crate::module::resolutionselector::ResolutionSelector;
 use crate::module::symbol::expr::ExprType;
-use crate::module::symbol::expr::resolution::{ResolutionConstraintType, ResolutionConstraintSolver, ResolutionError};
 use crate::module::symbol::literal::LiteralType;
 use crate::module::typeinfo::primitive::boolean::BOOLEAN_TYPE;
-use crate::module::typeinfo::Type;
-use crate::source::token::Keyword;
 
 pub struct LiteralBool {
     range: ModuleRange,
     value: bool,
-    resolutionSolver: ResolutionConstraintSolver,
+    resolutionSolver: ResolutionSelector,
 }
 
 impl LiteralBool {
@@ -18,7 +17,7 @@ impl LiteralBool {
         return Self {
             range,
             value,
-            resolutionSolver: ResolutionConstraintSolver::newFrom(rangeCopy, ResolutionConstraintType::Implicit(BOOLEAN_TYPE.to_owned())),
+            resolutionSolver: ResolutionSelector::newFrom(rangeCopy, ResolutionConstraintType::Implicit(BOOLEAN_TYPE.to_owned())),
         };
     }
 }
@@ -28,11 +27,11 @@ impl ExprType for LiteralBool {
         return &self.range;
     }
 
-    fn getResolutionSolver(&self) -> &ResolutionConstraintSolver {
+    fn getResolutionSolver(&self) -> &ResolutionSelector {
         return &self.resolutionSolver;
     }
 
-    fn getResolutionSolverMut(&mut self) -> &mut ResolutionConstraintSolver {
+    fn getResolutionSolverMut(&mut self) -> &mut ResolutionSelector {
         return &mut self.resolutionSolver;
     }
 }

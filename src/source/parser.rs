@@ -203,10 +203,6 @@ impl BasicTokenOption {
         return self.mask & basicToken.getBitMask() != 0;
     }
 
-    fn isOnlyOption(&self, basicToken: BasicToken) -> bool {
-        return self.isOptionSet(basicToken) && self.getOptionLength() == 1;
-    }
-
     fn getOptions(&self) -> Vec<BasicToken> {
         let mut vec = Vec::new();
         for basicToken in BasicToken::iter() {

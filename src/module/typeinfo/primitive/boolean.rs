@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
+use hashbrown::HashSet;
 use once_cell::sync::Lazy;
 use crate::module::typeinfo::{Type, TypeInfo};
 
@@ -17,5 +18,9 @@ impl TypeInfo for Boolean {
 
     fn getStaticSize(&self) -> u32 {
         return 1;
+    }
+
+    fn getImplicitConversions(&self) -> &HashSet<Type> {
+        todo!()
     }
 }

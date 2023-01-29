@@ -27,6 +27,12 @@ impl Logger {
         };
     }
 
+    fn returnGroup(&mut self, messageVec: &mut Vec<Box<dyn MessageType>>) {
+        let mut internal = self.internal.lock();
+        internal.missingGroups -= 1;
+        internal.returnedMessages.append(messageVec);
+    }
+
     pub fn isSilenced(&self, coreMessage: CoreMessageType) -> bool {
         return self.internal.lock().silencedCoreMessages.contains(&coreMessage);
     }
@@ -40,13 +46,7 @@ impl Logger {
         }
     }
 
-    fn returnGroup(&mut self, messageVec: &mut Vec<Box<dyn MessageType>>) {
-        let mut internal = self.internal.lock();
-        internal.missingGroups -= 1;
-        internal.returnedMessages.append(messageVec);
-    }
-
-    fn getMessages(self) -> Vec<Box<dyn MessageType>> {
+    pub fn getMessages(self) -> Vec<Box<dyn MessageType>> {
         let mut vec = {
             let mut internal = self.internal.lock();
             assert_eq!(internal.missingGroups, 0);
