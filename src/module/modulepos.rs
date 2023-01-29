@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use crate::module::Module;
 
+#[derive(Clone)]
 pub struct ModulePos {
     pub(in super) module: Rc<Module>,
     pub(in super) tokenIndex: usize,
@@ -16,6 +17,7 @@ impl ModulePos {
     }
 }
 
+#[derive(Clone)]
 pub struct ModuleRange {
     pub(in super) startPos: ModulePos,
     pub(in super) length: usize,

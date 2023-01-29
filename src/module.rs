@@ -10,6 +10,7 @@ mod tokenparser;
 pub mod symbol;
 pub mod modulepos;
 pub mod logger;
+pub mod typeinfo;
 
 pub struct Module {
     tokenVec: Vec<Token>,

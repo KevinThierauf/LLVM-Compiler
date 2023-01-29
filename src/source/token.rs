@@ -204,10 +204,11 @@ impl Operator {
 #[strum(use_phf)]
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Keyword {
-    // class
+    // structure
     Class,
     Static,
     Extends,
+    Enum,
     // visibility
     Public,
     Private,
@@ -218,10 +219,14 @@ pub enum Keyword {
     Else,
     While,
     For,
+    Loop,
     Break,
+    Continue,
     Return,
+    // literals
+    True,
+    False,
     // misc
-    Enum,
 }
 
 #[derive(Debug)]

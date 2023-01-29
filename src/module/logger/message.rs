@@ -1,5 +1,7 @@
-use crate::source::filepos::FilePos;
+use crate::module::logger::Logger;
+use crate::module::modulepos::ModulePos;
 
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum MessageLevel {
     Fatal,
     Error,
@@ -10,16 +12,57 @@ pub enum MessageLevel {
 }
 
 pub trait MessageType: 'static {
-    fn hasSilenced(&self) -> bool;
-    fn getLocation(&self) -> Option<FilePos>;
+    fn hasSilenced(&self, logger: &Logger) -> bool;
+    fn getLocation(&self) -> Option<ModulePos>;
     fn getLevel(&self) -> MessageLevel;
 }
 
-pub struct CommonMessage<T: MessageType> {
+pub struct CoreMessage {
     level: MessageLevel,
-    messageType: T,
-    location: Option<FilePos>,
+    location: Option<ModulePos>,
+    messageType: CoreMessageType,
 }
 
-pub enum CommonMessageType {
+impl CoreMessage {
+    pub fn new(level: MessageLevel, location: Option<ModulePos>, messageType: CoreMessageType) -> Self {
+        return Self {
+            level,
+            location,
+            messageType,
+        };
+    }
+
+    pub fn getMessageType(&self) -> &CoreMessageType {
+        return &self.messageType;
+    }
+}
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub enum CoreMessageType {
+}
+
+impl CoreMessageType {
+    pub fn getParentMessageType(&self) -> &'static [CoreMessageType] {
+        return match self {
+            _ => &[],
+        };
+    }
+
+    pub fn hasSilenced(&self, logger: &Logger) -> bool {
+        return logger.isSilenced(*self);
+    }
+}
+
+impl MessageType for CoreMessage {
+    fn hasSilenced(&self, logger: &Logger) -> bool {
+        return self.messageType.hasSilenced(logger);
+    }
+
+    fn getLocation(&self) -> Option<ModulePos> {
+        return self.location.to_owned();
+    }
+
+    fn getLevel(&self) -> MessageLevel {
+        return self.level;
+    }
 }

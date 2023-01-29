@@ -1,33 +1,15 @@
 pub mod message;
 
+use std::mem::swap;
 use std::sync::Arc;
+use hashbrown::HashSet;
 use parking_lot::Mutex;
-use crate::module::logger::message::MessageType;
-use crate::module::Module;
+use crate::module::logger::message::{CoreMessageType, MessageType};
 
 struct LogInternal {
     returnedMessages: Vec<Box<dyn MessageType>>,
     missingGroups: usize,
-}
-
-impl LogInternal {
-    fn returnGroup(&mut self, messageVec: &mut Vec<Box<dyn MessageType>>) {
-        self.missingGroups -= 1;
-        self.returnedMessages.append(messageVec);
-    }
-
-    fn requestGroup(&mut self, logger: Logger) -> LogGroup {
-        self.missingGroups += 1;
-        return LogGroup {
-            logger,
-            messageVec: Vec::new(),
-        }
-    }
-
-    fn getMessages(self) -> Vec<Box<dyn MessageType>> {
-        assert_eq!(self.missingGroups, 0);
-        return self.returnedMessages;
-    }
+    silencedCoreMessages: HashSet<CoreMessageType>,
 }
 
 #[derive(Clone)]
@@ -37,7 +19,43 @@ pub struct Logger {
 
 impl Logger {
     pub fn getNextLogGroup(&mut self) -> LogGroup {
-        return self.internal.lock().requestGroup(self.to_owned());
+        let mut internal = self.internal.lock();
+        internal.missingGroups += 1;
+        return LogGroup {
+            logger: self.to_owned(),
+            messageVec: Vec::new(),
+        };
+    }
+
+    pub fn isSilenced(&self, coreMessage: CoreMessageType) -> bool {
+        return self.internal.lock().silencedCoreMessages.contains(&coreMessage);
+    }
+
+    pub fn setSilenced(&mut self, coreMessage: CoreMessageType, silenced: bool) {
+        let messages = &mut self.internal.lock().silencedCoreMessages;
+        if silenced {
+            messages.insert(coreMessage);
+        } else {
+            messages.remove(&coreMessage);
+        }
+    }
+
+    fn returnGroup(&mut self, messageVec: &mut Vec<Box<dyn MessageType>>) {
+        let mut internal = self.internal.lock();
+        internal.missingGroups -= 1;
+        internal.returnedMessages.append(messageVec);
+    }
+
+    fn getMessages(self) -> Vec<Box<dyn MessageType>> {
+        let mut vec = {
+            let mut internal = self.internal.lock();
+            assert_eq!(internal.missingGroups, 0);
+            let mut vec = Vec::new();
+            swap(&mut vec, &mut internal.returnedMessages);
+            vec
+        };
+        vec.retain(|message| !message.hasSilenced(&self));
+        return vec;
     }
 }
 
@@ -48,15 +66,12 @@ pub struct LogGroup {
 
 impl LogGroup {
     pub fn log(&mut self, message: impl MessageType) {
-        if message.hasSilenced() {
-            return;
-        }
         self.messageVec.push(Box::new(message));
     }
 }
 
 impl Drop for LogGroup {
     fn drop(&mut self) {
-        self.logger.internal.lock().returnGroup(&mut self.messageVec);
+        self.logger.returnGroup(&mut self.messageVec);
     }
 }
