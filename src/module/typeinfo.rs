@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::sync::Arc;
@@ -18,6 +19,12 @@ pub trait TypeInfo: Sync + Send {
 
 #[derive(Clone)]
 pub struct Type(pub Arc<dyn TypeInfo>);
+
+impl Debug for Type {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return write!(f, "{}", self.0.getTypeName());
+    }
+}
 
 impl Deref for Type {
     type Target = Arc<dyn TypeInfo>;

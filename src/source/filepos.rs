@@ -88,7 +88,7 @@ pub struct FileRange {
 
 impl Display for FileRange {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        return f.write_str(&format!("{:?}:{} (through {})", self.start.sourceFile.fileInfo.fullPath, self.getStartIndex(), self.getEndIndex()));
+        return write!(f, "{:?}:{} (through {})", self.start.sourceFile.fileInfo.fullPath, self.getStartIndex(), self.getEndIndex());
     }
 }
 
