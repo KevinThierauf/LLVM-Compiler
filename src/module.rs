@@ -12,7 +12,6 @@ use crate::source::token::Token;
 mod tokenparser;
 pub mod symbol;
 pub mod modulepos;
-pub mod logger;
 pub mod typeinfo;
 pub mod resolutionselector;
 

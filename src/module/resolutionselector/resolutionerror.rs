@@ -1,16 +1,15 @@
-use crate::module::resolutionselector::resolutionconstraint::ResolutionConstraint;
+use crate::module::modulepos::ModuleRange;
 use crate::module::typeinfo::Type;
 
 pub enum ResolutionError {
-    // forced to be both types
-    Conflict(Vec<Type>),
-    // forced type with invalid constraint
-    ConstraintFailure(Vec<ResolutionConstraint>),
+    // forced to be multiple types
+    Conflict(Vec<(Type, Vec<ModuleRange>)>),
+    // forced type with invalid subset constraint
+    ForcedConstraint(Type, Vec<ModuleRange>),
+    // selected type explicitly excluded
+    Excluded(Vec<ModuleRange>),
     // could be one of several possibilities
     Ambiguous(Vec<Type>),
     // all possibilities eliminated
     Eliminated,
-    // not enough information constraining possible types
-    //  (similar to ambiguous, but where the set of possibilities is indeterminate or infinite)
-    Unconstrained,
 }

@@ -8,6 +8,7 @@ use crate::source::parseSource;
 
 pub mod source;
 pub mod module;
+pub mod logger;
 
 fn main() {
     const EXAMPLE_PATH: &'static str = "examples/source.txt";

@@ -1,7 +1,7 @@
+use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::sync::Arc;
-use hashbrown::HashSet;
 
 pub mod tuple;
 pub mod arraystatic;
@@ -13,7 +13,7 @@ pub mod arraydynamic;
 pub trait TypeInfo: Sync + Send {
     fn getTypeName(&self) -> &str;
     fn getStaticSize(&self) -> u32;
-    fn getImplicitConversions(&self) -> &HashSet<Type>;
+    fn getImplicitConversions(&self) -> &Vec<Type>;
 }
 
 #[derive(Clone)]
@@ -30,6 +30,18 @@ impl Deref for Type {
 impl Hash for Type {
     fn hash<H: Hasher>(&self, state: &mut H) {
         return Arc::as_ptr(&self.0).hash(state);
+    }
+}
+
+impl PartialOrd<Self> for Type {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        return Arc::as_ptr(&self.0).partial_cmp(&Arc::as_ptr(&other.0));
+    }
+}
+
+impl Ord for Type {
+    fn cmp(&self, other: &Self) -> Ordering {
+        return Arc::as_ptr(&self.0).cmp(&Arc::as_ptr(&other.0));
     }
 }
 

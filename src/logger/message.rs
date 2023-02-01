@@ -1,4 +1,4 @@
-use crate::module::logger::Logger;
+use crate::logger::Logger;
 use crate::module::modulepos::ModulePos;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]

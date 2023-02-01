@@ -35,11 +35,11 @@ impl ResolutionConstraintType {
         match self {
             ResolutionConstraintType::Exact(typeInfo) => {
                 // forced type will always have priority
-                selector.setForced(typeInfo);
+                selector.setForced(typeInfo, range.to_owned());
             }
             ResolutionConstraintType::Implicit(typeInfo) => {
                 selector.setPriority(typeInfo, NO_IMPLICIT_CONVERSION);
-                selector.setSubset(typeInfo.getImplicitConversions());
+                selector.setSubset(typeInfo.getImplicitConversions(), range.to_owned());
             }
             ResolutionConstraintType::Or(options) => {
                 selector.setAnyOf(range, options.as_slice());

@@ -4,7 +4,7 @@ use std::mem::swap;
 use std::sync::Arc;
 use hashbrown::HashSet;
 use parking_lot::Mutex;
-use crate::module::logger::message::{CoreMessageType, MessageType};
+use crate::logger::message::{CoreMessageType, MessageType};
 
 struct LogInternal {
     returnedMessages: Vec<Box<dyn MessageType>>,

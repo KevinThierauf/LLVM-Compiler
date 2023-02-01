@@ -27,11 +27,11 @@ impl ExprType for LiteralBool {
         return &self.range;
     }
 
-    fn getResolutionSolver(&self) -> &ResolutionSelector {
+    fn getResolutionSelector(&self) -> &ResolutionSelector {
         return &self.resolutionSolver;
     }
 
-    fn getResolutionSolverMut(&mut self) -> &mut ResolutionSelector {
+    fn getResolutionSelectorMut(&mut self) -> &mut ResolutionSelector {
         return &mut self.resolutionSolver;
     }
 }

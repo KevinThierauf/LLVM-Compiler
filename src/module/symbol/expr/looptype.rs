@@ -1,8 +1,10 @@
 use crate::module::symbol::expr::Expr;
-use crate::module::symbol::expr::label::Label;
+use label::Label;
 
 pub mod loopexpr;
 pub mod whileexpr;
+pub mod forexpr;
+pub mod label;
 
 pub trait LoopType {
     fn getConditional(&self) -> Expr;

@@ -1,5 +1,5 @@
 use crate::module::symbol::expr::Expr;
-use crate::module::symbol::expr::label::Label;
+use crate::module::symbol::expr::looptype::label::Label;
 use crate::module::symbol::expr::looptype::LoopType;
 
 pub struct WhileExpr {

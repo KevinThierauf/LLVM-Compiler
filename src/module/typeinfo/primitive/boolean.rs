@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
-use hashbrown::HashSet;
+
 use once_cell::sync::Lazy;
+
 use crate::module::typeinfo::{Type, TypeInfo};
 
 pub static BOOLEAN_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Boolean { phantom: PhantomData })));
@@ -20,7 +21,7 @@ impl TypeInfo for Boolean {
         return 1;
     }
 
-    fn getImplicitConversions(&self) -> &HashSet<Type> {
+    fn getImplicitConversions(&self) -> &Vec<Type> {
         todo!()
     }
 }
