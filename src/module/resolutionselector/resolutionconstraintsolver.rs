@@ -6,10 +6,10 @@ use hashbrown::HashSet;
 use priority_queue::PriorityQueue;
 
 use crate::module::modulepos::ModuleRange;
-use crate::module::resolutionselector::resolutionconstraint::ResolutionConstraintType;
 use crate::module::resolutionselector::ResolutionError;
 use crate::module::typeinfo::Type;
 
+#[derive(Debug)]
 struct ConstraintInfo<T> {
     value: T,
     range: Vec<ModuleRange>,
@@ -63,8 +63,8 @@ impl<T: Hash> Hash for ConstraintInfo<T> {
 pub struct ResolutionConstraintSolver {
     requiredTypes: HashSet<ConstraintInfo<Type>>,
     subsetTypes: Option<Vec<ConstraintInfo<Type>>>,
+    subsetVec: Vec<(Vec<Type>, ModuleRange)>,
     excluded: HashSet<ConstraintInfo<Type>>,
-    children: Vec<Vec<ResolutionConstraintSolver>>,
     priorityQueue: PriorityQueue<Type, u16>,
 }
 
@@ -73,36 +73,39 @@ impl ResolutionConstraintSolver {
         return Self {
             requiredTypes: HashSet::new(),
             subsetTypes: None,
+            subsetVec: Vec::new(),
             excluded: HashSet::new(),
-            children: Vec::new(),
             priorityQueue: Default::default(),
         };
     }
 
     // must be one of
-    pub fn setSubset(&mut self, options: &Vec<Type>, range: ModuleRange) {
-        if let Some(subset) = self.subsetTypes.take() {
-            fn checkOrdered(subset: &Vec<ConstraintInfo<Type>>) -> bool {
-                let mut iter = subset.iter();
-                let mut prev = iter.next();
-                let mut next = iter.next();
+    pub fn setSubsetOrdered(&mut self, options: &Vec<Type>, range: ModuleRange) {
+        fn checkOrdered(subset: &Vec<Type>) -> bool {
+            let mut iter = subset.iter();
+            let mut prev = iter.next();
+            let mut next = iter.next();
 
-                loop {
-                    match (prev, next) {
-                        (Some(prevValue), Some(nextValue)) => {
-                            if let Ordering::Less | Ordering::Equal = prevValue.value.cmp(&nextValue.value) {
-                                prev = Some(nextValue);
-                                next = iter.next();
-                            } else {
-                                return false;
-                            }
+            loop {
+                match (prev, next) {
+                    (Some(prevValue), Some(nextValue)) => {
+                        if let Ordering::Less | Ordering::Equal = prevValue.cmp(nextValue) {
+                            prev = Some(nextValue);
+                            next = iter.next();
+                        } else {
+                            return false;
                         }
-                        (_, _) => return true,
                     }
+                    (_, _) => return true,
                 }
             }
+        }
 
-            debug_assert!(checkOrdered(&subset), "subset vector is not ordered");
+        debug_assert!(checkOrdered(options), "options vector is not ordered");
+
+        self.subsetVec.push((options.to_owned(), range.to_owned()));
+        if let Some(subset) = self.subsetTypes.take() {
+            debug_assert!(checkOrdered(&subset.iter().map(|constraint| constraint.value.to_owned()).collect()), "subset vector is not ordered");
 
             let mut subsetIter = subset.into_iter();
             let mut optionIter = options.iter();
@@ -140,9 +143,7 @@ impl ResolutionConstraintSolver {
 
             self.subsetTypes = Some(optionVec);
         } else {
-            let mut vec: Vec<ConstraintInfo<Type>> = options.iter().map(|v| ConstraintInfo::new(v.to_owned(), range.to_owned())).collect();
-            vec.sort_by(|a, b| a.value.cmp(&b.value));
-            self.subsetTypes = Some(vec);
+            self.subsetTypes = Some(options.iter().map(|v| ConstraintInfo::new(v.to_owned(), range.to_owned())).collect());
         }
     }
 
@@ -169,19 +170,6 @@ impl ResolutionConstraintSolver {
         return self.priorityQueue.get_priority(value).map(|v| *v).unwrap_or_default();
     }
 
-    // can be any of the following (must be at least one)
-    pub fn setAnyOf(&mut self, range: &ModuleRange, options: &[ResolutionConstraintType]) {
-        let mut childVec = Vec::new();
-
-        for option in options {
-            let mut selector = ResolutionConstraintSolver::new();
-            option.resolve(range, &mut selector);
-            childVec.push(selector);
-        }
-
-        self.children.push(childVec);
-    }
-
     fn getSelectedType(&self) -> Result<Type, Vec<ResolutionError>> {
         debug_assert!(self.requiredTypes.is_empty());
 
@@ -194,10 +182,7 @@ impl ResolutionConstraintSolver {
             if currentPriorityVec.is_empty() {
                 currentPriority = *priority;
             } else if currentPriority != *priority {
-                return match currentPriorityVec.len() {
-                    1 => Ok(currentPriorityVec[0].to_owned()),
-                    _ => Err(vec![ResolutionError::Ambiguous(currentPriorityVec)]),
-                };
+                break;
             }
             if !self.isExcluded(value) {
                 currentPriorityVec.push(value.to_owned());
@@ -205,13 +190,19 @@ impl ResolutionConstraintSolver {
             nextValue = priorityIter.next();
         }
 
+        match currentPriorityVec.len() {
+            0 => {},
+            1 => return Ok(currentPriorityVec[0].to_owned()),
+            _ => return Err(vec![ResolutionError::Ambiguous(currentPriorityVec)]),
+        };
+
         let mut optionVec = Vec::new();
         let mut errorVec = Vec::new();
 
         if let Some(subsetTypes) = &self.subsetTypes {
             for typeInfo in subsetTypes {
                 if let Some(err) = self.getExcludedRange(&typeInfo.value) {
-                    errorVec.push(ResolutionError::Excluded(typeInfo.value.to_owned(), err))
+                    errorVec.push(ResolutionError::Excluded{ selected: typeInfo.value.to_owned(), excludedRange: err })
                 } else {
                     optionVec.push(&typeInfo.value);
                 }
@@ -220,7 +211,7 @@ impl ResolutionConstraintSolver {
 
         return match optionVec.len() {
             0 => {
-                errorVec.push(if nextValue.is_some() || !self.priorityQueue.is_empty() {
+                errorVec.push(if self.subsetTypes.is_some() || !self.priorityQueue.is_empty() {
                     ResolutionError::Eliminated
                 } else {
                     ResolutionError::Unconstrained
@@ -236,7 +227,19 @@ impl ResolutionConstraintSolver {
         return self.excluded.get(typeInfo).map(|constraint| constraint.range.to_owned());
     }
 
-    // todo - handle children
+    fn getSubsetExcludedRange(&self, typeInfo: &Type) -> Vec<ModuleRange> {
+        let mut vec = Vec::new();
+
+        for (typeVec, range) in &self.subsetVec {
+            // assumes typeVec is sorted
+            if typeVec.binary_search(typeInfo).is_err() {
+                vec.push(range.to_owned());
+            }
+        }
+
+        return vec;
+    }
+
     pub fn take(self) -> Result<Type, Vec<ResolutionError>> {
         return match self.requiredTypes.len() {
             0 => self.getSelectedType(),
@@ -244,13 +247,21 @@ impl ResolutionConstraintSolver {
                 let typeInfo = self.requiredTypes.iter().next().unwrap();
 
                 if let Some(excluded) = self.getExcludedRange(&typeInfo.value) {
-                    Err(vec![ResolutionError::Excluded(typeInfo.value.to_owned(), excluded)])
+                    Err(vec![ResolutionError::ForcedExcluded {
+                        forced: typeInfo.value.to_owned(),
+                        forcedRange: typeInfo.range.to_owned(),
+                        excludedRange: excluded,
+                    }])
                 } else {
-                    if let Some(subsetTypes) = self.subsetTypes {
+                    if let Some(subsetTypes) = &self.subsetTypes {
                         if subsetTypes.binary_search(typeInfo).is_ok() {
                             Ok(typeInfo.value.to_owned())
                         } else {
-                            Err(vec![ResolutionError::ForcedConstraint(typeInfo.value.to_owned(), subsetTypes.into_iter().map(|constraint| (constraint.value, constraint.range)).collect())])
+                            Err(vec![ResolutionError::ForcedSubset {
+                                forced: typeInfo.value.to_owned(),
+                                forcedRange: typeInfo.range.to_owned(),
+                                excludedRange: self.getSubsetExcludedRange(&typeInfo.value),
+                            }])
                         }
                     } else {
                         Ok(typeInfo.value.to_owned())
@@ -292,8 +303,15 @@ mod test {
 
         match error {
             ResolutionError::Conflict(vec) => sortInner(vec),
-            ResolutionError::ForcedConstraint(_, vec) => sortInner(vec),
-            ResolutionError::Excluded(_, vec) => vec.sort(),
+            ResolutionError::ForcedExcluded { forced: _, forcedRange, excludedRange } => {
+                forcedRange.sort();
+                excludedRange.sort();
+            }
+            ResolutionError::ForcedSubset { forced: _, forcedRange, excludedRange } => {
+                forcedRange.sort();
+                excludedRange.sort();
+            }
+            ResolutionError::Excluded { selected: _, excludedRange } => excludedRange.sort(),
             ResolutionError::Ambiguous(vec) => vec.sort(),
             ResolutionError::Eliminated => {}
             ResolutionError::Unconstrained => {}
@@ -338,8 +356,12 @@ mod test {
     fn testForcedConstraint() {
         let mut solver = ResolutionConstraintSolver::new();
         solver.setForced(&BOOLEAN_TYPE, getRange());
-        solver.setSubset(&Vec::new(), getRange());
-        assertEq(solver, Err(vec![ResolutionError::ForcedConstraint(BOOLEAN_TYPE.to_owned(), Vec::new())]));
+        solver.setSubsetOrdered(&Vec::new(), getRange());
+        assertEq(solver, Err(vec![ResolutionError::ForcedSubset {
+            forced: BOOLEAN_TYPE.to_owned(),
+            forcedRange: vec![getRange()],
+            excludedRange: vec![getRange()],
+        }]));
     }
 
     #[test]
@@ -348,13 +370,13 @@ mod test {
         solver.setPriority(&BOOLEAN_TYPE, 1);
         solver.setExcluded(&BOOLEAN_TYPE, getRange());
         assert!(solver.isExcluded(&BOOLEAN_TYPE));
-        assertEq(solver, Err(vec![ResolutionError::Excluded(BOOLEAN_TYPE.to_owned(), vec![getRange()])]));
+        assertEq(solver, Err(vec![ResolutionError::Eliminated]));
     }
 
     #[test]
     fn testEliminated() {
         let mut solver = ResolutionConstraintSolver::new();
-        solver.setSubset(&Vec::new(), getRange());
+        solver.setSubsetOrdered(&Vec::new(), getRange());
         assertEq(solver, Err(vec![ResolutionError::Eliminated]));
     }
 
@@ -373,9 +395,50 @@ mod test {
     }
 
     #[test]
+    fn testSubsetExcluded() {
+        let mut solver = ResolutionConstraintSolver::new();
+        solver.setExcluded(&BOOLEAN_TYPE, getRange());
+        solver.setSubsetOrdered(&vec![BOOLEAN_TYPE.to_owned()], getRange());
+        assertEq(solver, Err(vec![
+            ResolutionError::Excluded {
+                selected: BOOLEAN_TYPE.to_owned(),
+                excludedRange: vec![getRange()],
+            },
+            ResolutionError::Eliminated
+        ]));
+    }
+
+    #[test]
     fn testPriority() {
         let mut solver = ResolutionConstraintSolver::new();
         solver.setPriority(&BOOLEAN_TYPE, 1);
+        assertEq(solver, Ok(BOOLEAN_TYPE.to_owned()));
+    }
+
+    #[test]
+    fn testSubset() {
+        let mut solver = ResolutionConstraintSolver::new();
+        solver.setSubsetOrdered(&vec![BOOLEAN_TYPE.to_owned()], getRange());
+        assertEq(solver, Ok(BOOLEAN_TYPE.to_owned()));
+    }
+
+    #[test]
+    fn testPrioritySubset() {
+        let mut solver = ResolutionConstraintSolver::new();
+        solver.setPriority(&BOOLEAN_TYPE, 1);
+        let mut vec = vec![BOOLEAN_TYPE.to_owned(), CHARACTER_TYPE.to_owned()];
+        vec.sort();
+        solver.setSubsetOrdered(&vec, getRange());
+        assertEq(solver, Ok(BOOLEAN_TYPE.to_owned()));
+    }
+
+    #[test]
+    fn testExcludedSubset() {
+        let mut solver = ResolutionConstraintSolver::new();
+        solver.setExcluded(&CHARACTER_TYPE, getRange());
+        let mut vec = vec![BOOLEAN_TYPE.to_owned(), CHARACTER_TYPE.to_owned()];
+        vec.sort();
+        solver.setSubsetOrdered(&vec, getRange());
         assertEq(solver, Ok(BOOLEAN_TYPE.to_owned()));
     }
 }

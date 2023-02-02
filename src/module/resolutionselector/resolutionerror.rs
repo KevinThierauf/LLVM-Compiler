@@ -6,10 +6,12 @@ use crate::module::typeinfo::Type;
 pub enum ResolutionError {
     // forced to be multiple types
     Conflict(Vec<(Type, Vec<ModuleRange>)>),
+    // forced type explicitly excluded
+    ForcedExcluded { forced: Type, forcedRange: Vec<ModuleRange>, excludedRange: Vec<ModuleRange> },
     // forced type with invalid subset constraint
-    ForcedConstraint(Type, Vec<(Type, Vec<ModuleRange>)>),
+    ForcedSubset { forced: Type, forcedRange: Vec<ModuleRange>, excludedRange: Vec<ModuleRange> },
     // selected type explicitly excluded
-    Excluded(Type, Vec<ModuleRange>),
+    Excluded { selected: Type, excludedRange: Vec<ModuleRange> },
     // could be one of several possibilities
     Ambiguous(Vec<Type>),
     // all possibilities eliminated

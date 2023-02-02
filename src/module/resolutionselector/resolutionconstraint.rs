@@ -27,7 +27,6 @@ impl ResolutionConstraint {
 pub enum ResolutionConstraintType {
     Exact(Type),
     Implicit(Type),
-    Or(Vec<ResolutionConstraintType>),
 }
 
 impl ResolutionConstraintType {
@@ -39,10 +38,7 @@ impl ResolutionConstraintType {
             }
             ResolutionConstraintType::Implicit(typeInfo) => {
                 selector.setPriority(typeInfo, NO_IMPLICIT_CONVERSION);
-                selector.setSubset(typeInfo.getImplicitConversions(), range.to_owned());
-            }
-            ResolutionConstraintType::Or(options) => {
-                selector.setAnyOf(range, options.as_slice());
+                selector.setSubsetOrdered(typeInfo.getImplicitConversions(), range.to_owned());
             }
         }
     }
