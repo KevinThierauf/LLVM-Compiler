@@ -3,38 +3,39 @@ use std::ops::Range;
 use std::rc::Rc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
+
 use crate::module::modulepos::{ModulePos, ModuleRange};
+pub use crate::module::source::filepos::SourceFile;
+pub use crate::module::source::ParseError;
+pub use crate::module::source::token::*;
+use crate::module::source::parseSource;
 
-use crate::module::tokenparser::TokenParser;
-use crate::source::filepos::SourceFile;
-use crate::source::token::Token;
-
-mod tokenparser;
-pub mod symbol;
 pub mod modulepos;
-pub mod typeinfo;
-pub mod resolutionselector;
+pub mod visibility;
+mod source;
 
 static MODULE_INDEX: AtomicUsize = AtomicUsize::new(0);
 
+#[derive(Debug)]
 pub struct Module {
     moduleId: usize,
     tokenVec: Vec<Token>,
 }
 
 impl Module {
-    pub fn new(tokenVec: Vec<Token>) -> Rc<Self> {
-        let mut module = Self {
+    pub fn newFrom(tokenVec: Vec<Token>) -> Rc<Self> {
+        return Rc::new(Self {
             moduleId: MODULE_INDEX.fetch_add(1, Relaxed),
             tokenVec,
-        };
-        TokenParser::new(&mut module).parse();
-        return Rc::new(module);
+        });
     }
 
-    pub fn parse(sourceFile: SourceFile) -> Rc<Self> {
-        // return Self::new(parseSource(sourceFile));
-        todo!()
+    pub fn new(sourceFile: SourceFile) -> Result<Rc<Self>, ParseError> {
+        return Ok(Self::newFrom(parseSource(sourceFile)?));
+    }
+
+    pub fn getTokenVector(&self) -> &Vec<Token> {
+        return &self.tokenVec;
     }
 
     pub fn getModulePos(self: &Rc<Self>, tokenIndex: usize) -> ModulePos {

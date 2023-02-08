@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::rc::Rc;
+
 use crate::module::Module;
 
 #[derive(Clone, Hash)]
@@ -15,8 +16,7 @@ impl PartialEq<Self> for ModulePos {
     }
 }
 
-impl Eq for ModulePos {
-}
+impl Eq for ModulePos {}
 
 impl PartialOrd<Self> for ModulePos {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
