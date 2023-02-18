@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 
-extern crate core;
-
 use std::time::SystemTime;
+
+use crate::ast::AbstractSyntaxTree;
 use crate::module::{Module, SourceFile};
 
 pub mod module;
@@ -18,12 +18,17 @@ fn main() {
     let end = SystemTime::now();
     match result {
         Ok(module) => {
-            println!("{:?}", module);
+            match AbstractSyntaxTree::new(module) {
+                Ok(ast) => {
+                    println!("{:#?}", ast);
+                }
+                Err(err) => println!("{}", err.getDisplayMessage()),
+            }
         }
         Err(err) => {
             println!("{}", err.getDisplayMessage())
         }
     }
 
-    println!("Parsing completed in {}ms", end.duration_since(start).unwrap().as_millis());
+    println!("Token parsing completed in {}ms", end.duration_since(start).unwrap().as_millis());
 }

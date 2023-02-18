@@ -1,16 +1,18 @@
 use crate::ast::symbol::expr::Expr;
-use crate::ast::symbol::SymbolType;
+use crate::ast::symbol::{Symbol, SymbolType};
 use crate::module::modulepos::ModuleRange;
 
+#[derive(Debug)]
 pub struct ElseSym {
-    expr: Expr
+    pub symbol: Symbol
 }
 
+#[derive(Debug)]
 pub struct IfSym {
-    expr: Expr,
-    condition: Expr,
-    range: ModuleRange,
-    elseExpr: Option<ElseSym>,
+    pub symbol: Box<Symbol>,
+    pub condition: Expr,
+    pub range: ModuleRange,
+    pub elseExpr: Option<Box<ElseSym>>,
 }
 
 impl SymbolType for IfSym {

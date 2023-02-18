@@ -1,7 +1,7 @@
 pub mod literalbool;
 pub mod literalarray;
 pub mod literaltuple;
-pub mod literalfixed;
+pub mod literalFloat;
 pub mod literalstring;
 pub mod literalinteger;
 pub mod literalchar;

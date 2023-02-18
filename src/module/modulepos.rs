@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::rc::Rc;
 
-use crate::module::Module;
+use crate::module::{Module, Token};
 
 #[derive(Clone, Hash)]
 pub struct ModulePos {
@@ -49,6 +49,14 @@ impl ModulePos {
     pub fn getTokenIndex(&self) -> usize {
         return self.tokenIndex;
     }
+
+    pub fn getToken(&self) -> &Token {
+        return &self.module.getTokenVector()[self.tokenIndex];
+    }
+
+    pub fn getRange(&self, length: usize) -> ModuleRange {
+        return self.module.getModuleRange(self.getTokenIndex()..self.getTokenIndex() + length);
+    }
 }
 
 #[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -68,6 +76,14 @@ impl ModuleRange {
         return self.startPos.getModule();
     }
 
+    pub fn getStartPos(&self) -> ModulePos {
+        return self.startPos.to_owned();
+    }
+
+    pub fn getEndPos(&self) -> ModulePos {
+        return self.getModule().getModulePos(self.getEndIndex());
+    }
+
     pub fn getStartIndex(&self) -> usize {
         return self.startPos.getTokenIndex();
     }
@@ -78,5 +94,15 @@ impl ModuleRange {
 
     pub fn getLength(&self) -> usize {
         return self.length;
+    }
+
+    pub fn setStartIndex(&mut self, index: usize) {
+        debug_assert!(index <= self.getEndIndex());
+        self.startPos.tokenIndex = index;
+    }
+
+    pub fn setEndIndex(&mut self, index: usize) {
+        debug_assert!(index >= self.getStartIndex());
+        self.length = index - self.getStartIndex();
     }
 }

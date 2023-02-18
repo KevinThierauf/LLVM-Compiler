@@ -9,6 +9,7 @@ mod tokensource;
 pub mod symbol;
 pub mod typeinfo;
 
+#[derive(Debug)]
 pub struct AbstractSyntaxTree {
     symbolVec: Vec<Symbol>,
 }

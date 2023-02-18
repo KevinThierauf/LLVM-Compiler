@@ -1,23 +1,24 @@
-use crate::module::modulepos::ModuleRange;
 use crate::ast::symbol::block::BlockSym;
 use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::SymbolType;
-use crate::ast::typeinfo::Type;
+use crate::module::modulepos::{ModulePos, ModuleRange};
 use crate::module::visibility::Visibility;
 
+#[derive(Debug)]
 pub struct FunctionParameter {
-    typeInfo: Type,
-    parameterName: ModuleRange,
-    defaultExpr: Option<Expr>,
+    pub typeName: ModulePos,
+    pub parameterName: ModulePos,
+    pub defaultExpr: Option<Expr>,
 }
 
+#[derive(Debug)]
 pub struct FunctionDefinitionSym {
-    range: ModuleRange,
-    returnType: Type,
-    functionName: ModuleRange,
-    parameters: Vec<FunctionParameter>,
-    functionBlock: BlockSym,
-    visibility: Visibility,
+    pub range: ModuleRange,
+    pub returnType: ModulePos,
+    pub functionName: ModulePos,
+    pub parameters: Vec<FunctionParameter>,
+    pub functionBlock: BlockSym,
+    pub visibility: Visibility,
 }
 
 impl SymbolType for FunctionDefinitionSym {

@@ -1,6 +1,9 @@
 structure.function()
 0..1
 
+import test
+import test as something
+
 let variable = 6
 let variable2 = 7
 

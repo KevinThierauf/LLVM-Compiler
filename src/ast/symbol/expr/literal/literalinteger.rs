@@ -4,6 +4,7 @@ use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::SymbolType;
 use crate::ast::typeinfo::Type;
 
+#[derive(Debug)]
 pub struct LiteralInteger {
     range: ModuleRange,
 }

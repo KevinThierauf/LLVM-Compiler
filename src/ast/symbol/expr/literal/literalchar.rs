@@ -5,9 +5,10 @@ use crate::ast::symbol::SymbolType;
 use crate::ast::typeinfo::primitive::character::CHARACTER_TYPE;
 use crate::ast::typeinfo::Type;
 
+#[derive(Debug)]
 pub struct LiteralChar {
-    range: ModuleRange,
-    character: u32,
+    pub range: ModuleRange,
+    pub character: u32,
 }
 
 impl ExprType for LiteralChar {}

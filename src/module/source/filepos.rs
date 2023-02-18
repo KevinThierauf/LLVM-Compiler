@@ -81,6 +81,7 @@ impl FilePos {
     }
 }
 
+#[derive(Clone)]
 pub struct FileRange {
     start: FilePos,
     length: usize,

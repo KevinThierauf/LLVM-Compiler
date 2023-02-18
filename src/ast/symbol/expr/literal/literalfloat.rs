@@ -4,19 +4,20 @@ use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::SymbolType;
 use crate::ast::typeinfo::Type;
 
-pub struct LiteralFixed {
+#[derive(Debug)]
+pub struct LiteralFloat {
     range: ModuleRange,
 }
 
-impl ExprType for LiteralFixed {}
+impl ExprType for LiteralFloat {}
 
-impl SymbolType for LiteralFixed {
+impl SymbolType for LiteralFloat {
     fn getRange(&self) -> &ModuleRange {
         return &self.range;
     }
 }
 
-impl LiteralType for LiteralFixed {
+impl LiteralType for LiteralFloat {
     fn getLiteralType(&self) -> Type {
         todo!()
     }

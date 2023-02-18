@@ -5,6 +5,7 @@ use crate::ast::symbol::SymbolType;
 use crate::ast::typeinfo::primitive::boolean::BOOLEAN_TYPE;
 use crate::ast::typeinfo::Type;
 
+#[derive(Debug)]
 pub struct LiteralBool {
     range: ModuleRange,
     value: bool,

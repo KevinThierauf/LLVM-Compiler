@@ -2,6 +2,7 @@ use crate::module::modulepos::ModuleRange;
 use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::SymbolType;
 
+#[derive(Debug)]
 pub struct ParenthesisExpr {
     range: ModuleRange,
     expression: Expr

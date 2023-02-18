@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use strum_macros::EnumDiscriminants;
 use strum_macros::EnumIter;
 
@@ -9,7 +10,7 @@ use crate::ast::symbol::expr::functioncall::FunctionCallExpr;
 use crate::ast::symbol::expr::literal::literalarray::LiteralArray;
 use crate::ast::symbol::expr::literal::literalbool::LiteralBool;
 use crate::ast::symbol::expr::literal::literalchar::LiteralChar;
-use crate::ast::symbol::expr::literal::literalfixed::LiteralFixed;
+use crate::ast::symbol::expr::literal::literalFloat::LiteralFloat;
 use crate::ast::symbol::expr::literal::literalinteger::LiteralInteger;
 use crate::ast::symbol::expr::literal::literalstring::LiteralString;
 use crate::ast::symbol::expr::literal::literaltuple::LiteralTuple;
@@ -33,10 +34,11 @@ pub mod looptype;
 pub mod breaksym;
 pub mod ifstatement;
 
-pub trait SymbolType {
+pub trait SymbolType: Debug {
     fn getRange(&self) -> &ModuleRange;
 }
 
+#[derive(Debug)]
 #[derive(EnumDiscriminants)]
 #[strum_discriminants(derive(EnumIter))]
 pub enum Symbol {
@@ -57,7 +59,7 @@ pub enum Symbol {
     LiteralArray(LiteralArray),
     LiteralBool(LiteralBool),
     LiteralChar(LiteralChar),
-    LiteralFixed(LiteralFixed),
+    LiteralFloat(LiteralFloat),
     LiteralInteger(LiteralInteger),
     LiteralString(LiteralString),
     LiteralVoid(LiteralVoid),
@@ -81,7 +83,7 @@ impl Symbol {
             Symbol::LiteralArray(symbol) => symbol,
             Symbol::LiteralBool(symbol) => symbol,
             Symbol::LiteralChar(symbol) => symbol,
-            Symbol::LiteralFixed(symbol) => symbol,
+            Symbol::LiteralFloat(symbol) => symbol,
             Symbol::LiteralInteger(symbol) => symbol,
             Symbol::LiteralString(symbol) => symbol,
             Symbol::LiteralVoid(symbol) => symbol,
@@ -105,7 +107,7 @@ impl Symbol {
             Symbol::LiteralArray(symbol) => Some(symbol),
             Symbol::LiteralBool(symbol) => Some(symbol),
             Symbol::LiteralChar(symbol) => Some(symbol),
-            Symbol::LiteralFixed(symbol) => Some(symbol),
+            Symbol::LiteralFloat(symbol) => Some(symbol),
             Symbol::LiteralInteger(symbol) => Some(symbol),
             Symbol::LiteralString(symbol) => Some(symbol),
             Symbol::LiteralVoid(symbol) => Some(symbol),
@@ -129,7 +131,7 @@ impl Symbol {
             Symbol::LiteralArray(symbol) => Some(symbol),
             Symbol::LiteralBool(symbol) => Some(symbol),
             Symbol::LiteralChar(symbol) => Some(symbol),
-            Symbol::LiteralFixed(symbol) => Some(symbol),
+            Symbol::LiteralFloat(symbol) => Some(symbol),
             Symbol::LiteralInteger(symbol) => Some(symbol),
             Symbol::LiteralString(symbol) => Some(symbol),
             Symbol::LiteralVoid(symbol) => Some(symbol),

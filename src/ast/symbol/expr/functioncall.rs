@@ -1,11 +1,12 @@
-use crate::module::modulepos::ModuleRange;
+use crate::module::modulepos::{ModulePos, ModuleRange};
 use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::SymbolType;
 
+#[derive(Debug)]
 pub struct FunctionCallExpr {
-    range: ModuleRange,
-    functionName: ModuleRange,
-    argVec: Vec<Expr>,
+    pub range: ModuleRange,
+    pub functionName: ModulePos,
+    pub argVec: Vec<Expr>,
 }
 
 impl SymbolType for FunctionCallExpr {

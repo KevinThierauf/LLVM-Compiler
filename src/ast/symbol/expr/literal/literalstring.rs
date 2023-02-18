@@ -3,10 +3,12 @@ use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::SymbolType;
 use crate::ast::typeinfo::Type;
+use crate::module::FileRange;
 
+#[derive(Debug)]
 pub struct LiteralString {
-    range: ModuleRange,
-    strRange: ModuleRange,
+    pub range: ModuleRange,
+    pub fileRange: FileRange,
 }
 
 impl ExprType for LiteralString {}

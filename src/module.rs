@@ -5,10 +5,10 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 
 use crate::module::modulepos::{ModulePos, ModuleRange};
-pub use crate::module::source::filepos::SourceFile;
+pub use crate::module::source::filepos::*;
 pub use crate::module::source::ParseError;
-pub use crate::module::source::token::*;
 use crate::module::source::parseSource;
+pub use crate::module::source::token::*;
 
 pub mod modulepos;
 pub mod visibility;

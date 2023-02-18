@@ -1,10 +1,11 @@
-use crate::module::modulepos::ModuleRange;
+use crate::module::modulepos::{ModulePos, ModuleRange};
 use crate::ast::symbol::SymbolType;
 
+#[derive(Debug)]
 pub struct ImportSym {
-    range: ModuleRange,
-    packageName: ModuleRange,
-    localName: Option<ModuleRange>,
+    pub range: ModuleRange,
+    pub packageName: ModulePos,
+    pub localName: Option<ModulePos>,
 }
 
 impl SymbolType for ImportSym {

@@ -5,8 +5,9 @@ use crate::ast::symbol::SymbolType;
 use crate::ast::typeinfo::Type;
 use crate::ast::typeinfo::void::VOID_TYPE;
 
+#[derive(Debug)]
 pub struct LiteralVoid {
-    range: ModuleRange,
+    pub range: ModuleRange,
 }
 
 impl ExprType for LiteralVoid {}

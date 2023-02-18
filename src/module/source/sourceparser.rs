@@ -6,7 +6,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumCount, EnumIter, EnumString};
-use crate::module::ParseError;
+use crate::module::{Module, ParseError};
 use crate::module::source::filepos::{FilePos, FileRange, SourceFile};
 use crate::module::source::sourceparser::BasicToken::*;
 use crate::module::source::token::{Keyword, Operator, ParenthesisType, QuoteType, Token, TokenType};
@@ -272,7 +272,7 @@ impl ParserTokenVec {
             commaTokenVec.push(currentCommaVec);
 
             self.tokenVec.push(Token::new(
-                TokenType::CommaList(commaTokenVec),
+                TokenType::CommaList(commaTokenVec.into_iter().map(|tokenVector| Module::newFrom(tokenVector)).collect()),
                 FileRange::new(self.startIndex.to_owned(), nextCharacterIndex - startIndex),
             ));
         }
@@ -574,7 +574,7 @@ impl SourceParser {
                     match self.parenthesisSet.pop(parenthesisType) {
                         Ok((parentTokenVec, openIndex)) => {
                             let tokenVec = self.parserVec.makeParent(self.nextCharacterIndex, parentTokenVec);
-                            self.parserVec.addTokenRange(TokenType::Parenthesis(parenthesisType, tokenVec), self.getFileRange(openIndex..self.nextCharacterIndex));
+                            self.parserVec.addTokenRange(TokenType::Parenthesis(parenthesisType, Module::newFrom(tokenVec)), self.getFileRange(openIndex..self.nextCharacterIndex));
                         }
                         Err(err) => {
                             return Err(self.getErrorBasicTokenRange(if let Some(parenthesis) = err {

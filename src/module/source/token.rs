@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, RangeInclusive};
+use std::rc::Rc;
 
 use once_cell::sync::Lazy;
 use strum::IntoEnumIterator;
 use strum_macros::{EnumDiscriminants, EnumIter, EnumString};
+
+use crate::module::Module;
 use crate::module::source::filepos::FileRange;
 
 #[derive(EnumIter)]
@@ -235,6 +238,8 @@ pub enum Keyword {
     False,
     Void,
     // misc
+    Import,
+    As,
 }
 
 #[derive(Debug)]
@@ -246,9 +251,9 @@ pub enum TokenType {
     Number,
     Keyword(Keyword),
     Comment(FileRange),
-    CommaList(Vec<Vec<Token>>),
+    CommaList(Vec<Rc<Module>>),
     String(QuoteType, FileRange),
-    Parenthesis(ParenthesisType, Vec<Token>),
+    Parenthesis(ParenthesisType, Rc<Module>),
     Operator(Operator),
 }
 

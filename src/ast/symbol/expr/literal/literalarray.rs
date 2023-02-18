@@ -1,13 +1,13 @@
 use crate::module::modulepos::ModuleRange;
-use crate::ast::symbol::expr::ExprType;
+use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::SymbolType;
 use crate::ast::typeinfo::Type;
 
+#[derive(Debug)]
 pub struct LiteralArray {
-    range: ModuleRange,
-    baseType: Type,
-    arrayLength: usize,
+    pub range: ModuleRange,
+    pub exprVec: Vec<Expr>,
 }
 
 impl ExprType for LiteralArray {}
