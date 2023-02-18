@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use crate::ast::symbol::block::BlockSym;
+use crate::ast::symbol::breaksym::BreakSym;
 use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::expr::functioncall::FunctionCallExpr;
 use crate::ast::symbol::expr::literal::literalarray::LiteralArray;
@@ -17,6 +18,7 @@ use crate::ast::symbol::expr::variableexpr::VariableExpr;
 use crate::ast::symbol::function::{FunctionDefinitionSym, FunctionParameter};
 use crate::ast::symbol::ifstatement::{ElseSym, IfSym};
 use crate::ast::symbol::import::ImportSym;
+use crate::ast::symbol::looptype::label::Label;
 use crate::ast::symbol::Symbol;
 use crate::ast::tokensource::symbolparser::{getMatchFrom, getNestedMatch, Match, MatchType, OptionalMatch};
 use crate::module::{FileRange, Keyword, Module, Operator, ParenthesisType, QuoteType, TokenType};
@@ -98,6 +100,12 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
     });
 }
 
+pub fn getMatchMultipleSymbol() -> impl MatchType<Value = Vec<Symbol>> {
+    return getMatchFrom(|pos| {
+        todo!()
+    });
+}
+
 pub fn getMatchExpr() -> impl MatchType<Value = Expr> {
     return getMatchFrom(|pos| {
         todo!()
@@ -129,17 +137,32 @@ pub fn getMatchExprCommaList(exclusive: bool) -> impl MatchType<Value = Vec<Expr
 
 pub fn getMatchBlockSym() -> impl MatchType<Value = BlockSym> {
     // { expressions }
-    return getMatchFrom(|pos| {
-        todo!()
+    return getMatchParenthesis(ParenthesisType::Curly, |module| {
+        getMatchMultipleSymbol().getMatch(module.getModulePos(0)).map(|matchValue| {
+            let (range, symbolVec) = matchValue.take();
+            return BlockSym {
+                range,
+                symbolVec,
+            };
+        })
     });
 }
 
-pub fn getMatchBreakSym() -> impl MatchType<Value = Expr> {
+pub fn getMatchBreakSym() -> impl MatchType<Value = BreakSym> {
     // break
     // break label
-    return getMatchFrom(|pos| {
-        todo!()
-    });
+    return getNestedMatch(
+        (
+            getMatchKeyword(Keyword::Break), // break
+            OptionalMatch::new(getMatchIdentifier()), // label
+        ), |range, (_, label)|
+            Some(BreakSym {
+                range,
+                label: label.map(|identifier| Label {
+                    identifier,
+                }),
+            }),
+    );
 }
 
 pub fn getMatchClassDefinitionSym() -> impl MatchType<Value = Expr> {
@@ -326,17 +349,37 @@ pub fn getMatchLiteralChar() -> impl MatchType<Value = LiteralChar> {
     }));
 }
 
+fn isFloat(number: &FileRange) -> bool {
+    return number.getSourceInRange().contains('.');
+}
+
 pub fn getMatchLiteralFloat() -> impl MatchType<Value = LiteralFloat> {
     // 0.0
     return getMatchFrom(|pos| {
-        todo!()
+        if let TokenType::Number = pos.getToken().getTokenType() {
+            if isFloat(pos.getToken().getSourceRange()) {
+                let range = pos.getRange(1);
+                return Some(Match::new(range.to_owned(), LiteralFloat {
+                    range,
+                }));
+            }
+        }
+        return None;
     });
 }
 
 pub fn getMatchLiteralInteger() -> impl MatchType<Value = LiteralInteger> {
     // 0
     return getMatchFrom(|pos| {
-        todo!()
+        if let TokenType::Number = pos.getToken().getTokenType() {
+            if !isFloat(pos.getToken().getSourceRange()) {
+                let range = pos.getRange(1);
+                return Some(Match::new(range.to_owned(), LiteralInteger {
+                    range,
+                }));
+            }
+        }
+        return None;
     });
 }
 

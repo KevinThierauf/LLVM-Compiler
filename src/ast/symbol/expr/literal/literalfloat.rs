@@ -6,7 +6,7 @@ use crate::ast::typeinfo::Type;
 
 #[derive(Debug)]
 pub struct LiteralFloat {
-    range: ModuleRange,
+    pub range: ModuleRange,
 }
 
 impl ExprType for LiteralFloat {}

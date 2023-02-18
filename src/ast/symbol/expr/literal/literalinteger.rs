@@ -6,7 +6,7 @@ use crate::ast::typeinfo::Type;
 
 #[derive(Debug)]
 pub struct LiteralInteger {
-    range: ModuleRange,
+    pub range: ModuleRange,
 }
 
 impl ExprType for LiteralInteger {}
