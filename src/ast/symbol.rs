@@ -5,6 +5,7 @@ use strum_macros::EnumIter;
 use crate::ast::symbol::block::BlockSym;
 use crate::ast::symbol::breaksym::BreakSym;
 use crate::ast::symbol::classdefinition::ClassDefinitionSym;
+use crate::ast::symbol::continuesym::ContinueSym;
 use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::functioncall::FunctionCallExpr;
 use crate::ast::symbol::expr::literal::literalarray::LiteralArray;
@@ -23,6 +24,10 @@ use crate::ast::symbol::expr::variableexpr::VariableExpr;
 use crate::ast::symbol::function::FunctionDefinitionSym;
 use crate::ast::symbol::ifstatement::IfSym;
 use crate::ast::symbol::import::ImportSym;
+use crate::ast::symbol::looptype::forloop::ForLoop;
+use crate::ast::symbol::looptype::r#loop::Loop;
+use crate::ast::symbol::looptype::whileloop::WhileLoop;
+use crate::ast::symbol::returnsym::ReturnSym;
 use crate::module::modulepos::ModuleRange;
 
 pub mod expr;
@@ -33,6 +38,8 @@ pub mod classdefinition;
 pub mod looptype;
 pub mod breaksym;
 pub mod ifstatement;
+pub mod continuesym;
+pub mod returnsym;
 
 pub trait SymbolType: Debug {
     fn getRange(&self) -> &ModuleRange;
@@ -44,10 +51,17 @@ pub trait SymbolType: Debug {
 pub enum Symbol {
     // common symbols
     Block(BlockSym),
+    // control flow
     Break(BreakSym),
+    Continue(ContinueSym),
+    While(WhileLoop),
+    Loop(Loop),
+    For(ForLoop),
+    Return(ReturnSym),
+    IfSym(IfSym),
+    // structures
     ClassDefinition(ClassDefinitionSym),
     FunctionDefinition(FunctionDefinitionSym),
-    IfSym(IfSym),
     ImportSym(ImportSym),
     // expressions
     FunctionCall(FunctionCallExpr),
@@ -87,7 +101,12 @@ impl Symbol {
             Symbol::LiteralInteger(symbol) => symbol,
             Symbol::LiteralString(symbol) => symbol,
             Symbol::LiteralVoid(symbol) => symbol,
-            Symbol::LiteralTuple(symbol) => symbol
+            Symbol::LiteralTuple(symbol) => symbol,
+            Symbol::Continue(symbol) => symbol,
+            Symbol::While(symbol) => symbol,
+            Symbol::Loop(symbol) => symbol,
+            Symbol::For(symbol) => symbol,
+            Symbol::Return(symbol) => symbol,
         };
     }
 
@@ -98,6 +117,11 @@ impl Symbol {
             Symbol::ClassDefinition(_) |
             Symbol::FunctionDefinition(_) |
             Symbol::IfSym(_) |
+            Symbol::Continue(_) |
+            Symbol::While(_) |
+            Symbol::Loop(_) |
+            Symbol::For(_) |
+            Symbol::Return(_) |
             Symbol::ImportSym(_) => None,
             Symbol::FunctionCall(symbol) => Some(symbol),
             Symbol::Operator(symbol) => Some(symbol),
@@ -111,7 +135,7 @@ impl Symbol {
             Symbol::LiteralInteger(symbol) => Some(symbol),
             Symbol::LiteralString(symbol) => Some(symbol),
             Symbol::LiteralVoid(symbol) => Some(symbol),
-            Symbol::LiteralTuple(symbol) => Some(symbol)
+            Symbol::LiteralTuple(symbol) => Some(symbol),
         };
     }
 
@@ -127,6 +151,11 @@ impl Symbol {
             Symbol::Operator(_) |
             Symbol::Parenthesis(_) |
             Symbol::VariableDeclaration(_) |
+            Symbol::Continue(_) |
+            Symbol::While(_) |
+            Symbol::Loop(_) |
+            Symbol::For(_) |
+            Symbol::Return(_) |
             Symbol::Variable(_) => None,
             Symbol::LiteralArray(symbol) => Some(symbol),
             Symbol::LiteralBool(symbol) => Some(symbol),

@@ -1,13 +1,12 @@
-use crate::module::modulepos::ModuleRange;
 use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::SymbolType;
-use crate::ast::typeinfo::Type;
+use crate::module::modulepos::{ModulePos, ModuleRange};
 
 #[derive(Debug)]
 pub struct VariableDeclarationExpr {
-    range: ModuleRange,
-    variableName: ModuleRange,
-    explicitType: Option<Type>,
+    pub range: ModuleRange,
+    pub variableName: ModulePos,
+    pub explicitType: Option<ModulePos>,
 }
 
 impl SymbolType for VariableDeclarationExpr {

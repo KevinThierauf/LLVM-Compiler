@@ -21,5 +21,5 @@ impl ASTError {
 }
 
 pub fn parseModule(module: Rc<Module>) -> Result<Vec<Symbol>, ASTError> {
-    return parseTokenVec(module.to_owned(), module.getTokenVector());
+    return parseTokenVec(module);
 }

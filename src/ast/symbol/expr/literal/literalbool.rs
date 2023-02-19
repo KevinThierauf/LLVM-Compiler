@@ -7,8 +7,8 @@ use crate::ast::typeinfo::Type;
 
 #[derive(Debug)]
 pub struct LiteralBool {
-    range: ModuleRange,
-    value: bool,
+    pub range: ModuleRange,
+    pub value: bool,
 }
 
 impl LiteralBool {

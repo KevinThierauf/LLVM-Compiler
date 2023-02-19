@@ -5,9 +5,15 @@ use crate::module::Operator;
 
 #[derive(Debug)]
 pub struct OperatorExpr {
-    range: ModuleRange,
-    operands: Box<[Expr]>,
-    operator: Operator,
+    pub range: ModuleRange,
+    pub operands: Box<[Expr]>,
+    pub operator: Operator,
+}
+
+impl OperatorExpr {
+    pub fn getFromComponents(components: Vec<OperationComponent>) -> Option<Self> {
+        todo!()
+    }
 }
 
 impl SymbolType for OperatorExpr {
@@ -17,4 +23,9 @@ impl SymbolType for OperatorExpr {
 }
 
 impl ExprType for OperatorExpr {
+}
+
+pub enum OperationComponent {
+    Operator(Operator),
+    Expression(Expr),
 }

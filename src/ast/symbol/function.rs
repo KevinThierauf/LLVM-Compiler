@@ -1,6 +1,7 @@
 use crate::ast::symbol::block::BlockSym;
 use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::SymbolType;
+use crate::module::Keyword;
 use crate::module::modulepos::{ModulePos, ModuleRange};
 use crate::module::visibility::Visibility;
 
@@ -12,8 +13,23 @@ pub struct FunctionParameter {
 }
 
 #[derive(Debug)]
+pub enum FunctionAttribute {
+    Static,
+}
+
+impl FunctionAttribute {
+    pub fn fromKeyword(keyword: Keyword) -> Option<FunctionAttribute> {
+        return match keyword {
+            Keyword::Static => Some(FunctionAttribute::Static),
+            _ => None
+        };
+    }
+}
+
+#[derive(Debug)]
 pub struct FunctionDefinitionSym {
     pub range: ModuleRange,
+    pub attributeVec: Vec<FunctionAttribute>,
     pub returnType: ModulePos,
     pub functionName: ModulePos,
     pub parameters: Vec<FunctionParameter>,

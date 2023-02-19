@@ -1,4 +1,4 @@
-use crate::module::modulepos::ModuleRange;
+use crate::module::modulepos::{ModulePos, ModuleRange};
 use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::function::FunctionDefinitionSym;
 use crate::ast::symbol::SymbolType;
@@ -6,42 +6,36 @@ use crate::module::visibility::Visibility;
 
 #[derive(Debug)]
 pub struct ClassFieldDefinition {
-    pub name: ModuleRange,
+    pub name: ModulePos,
     pub visibility: Visibility,
     // typeName or defaultValue (or both) MUST be Some
-    pub typeName: Option<ModuleRange>,
+    pub typeName: Option<ModulePos>,
     pub defaultValue: Option<Expr>,
 }
 
 #[derive(Debug)]
 pub struct ClassStaticFieldDefinition {
-    pub name: ModuleRange,
-    pub typeName: Option<ModuleRange>,
+    pub name: ModulePos,
+    pub typeName: Option<ModulePos>,
     pub visibility: Visibility,
-    pub value: Expr,
+    pub defaultValue: Option<Expr>,
 }
 
-#[derive(Debug)]
-pub struct ClassMethodDefinition {
-    pub function: FunctionDefinitionSym,
-    pub visibility: Visibility,
-}
-
-#[derive(Debug)]
-pub struct ClassStaticFunctionDefinition {
-    pub function: FunctionDefinitionSym,
-    pub visibility: Visibility,
+pub enum ClassMember {
+    FieldDefinition(ClassFieldDefinition),
+    FunctionDefinition(FunctionDefinitionSym),
+    StaticFieldDefinition(ClassStaticFieldDefinition),
 }
 
 #[derive(Debug)]
 pub struct ClassDefinitionSym {
     pub visibility: Visibility,
     pub range: ModuleRange,
-    pub name: ModuleRange,
+    pub name: ModulePos,
     pub fields: Vec<ClassFieldDefinition>,
-    pub methods: Vec<ClassMethodDefinition>,
-    pub staticMethods: Vec<ClassStaticFunctionDefinition>,
-    pub inherited: Vec<ModuleRange>,
+    pub staticFields: Vec<ClassStaticFieldDefinition>,
+    pub methods: Vec<FunctionDefinitionSym>,
+    pub inherited: Vec<ModulePos>,
 }
 
 impl SymbolType for ClassDefinitionSym {

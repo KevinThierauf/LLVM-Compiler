@@ -23,6 +23,10 @@ impl<T> Match<T> {
         return &self.range;
     }
 
+    pub fn getValue(&self) -> &T {
+        return &self.value;
+    }
+
     pub fn take(self) -> (ModuleRange, T) {
         return (self.range, self.value);
     }
@@ -78,7 +82,7 @@ pub fn getMatchFrom<S>(function: impl 'static + Clone + Fn(ModulePos) -> Option<
     };
 }
 
-pub fn getNestedMatch<S, T: MatchType>(matcher: T, function: impl 'static + Clone + Fn(ModuleRange, T::Value) -> Option<S>) -> impl MatchType<Value = S> {
+pub fn getMappedMatch<S, T: MatchType>(matcher: T, function: impl 'static + Clone + Fn(ModuleRange, T::Value) -> Option<S>) -> impl MatchType<Value = S> {
     struct MatchNested<S, T: MatchType, F: 'static + Clone + Fn(ModuleRange, T::Value) -> Option<S>> {
         matcher: T,
         function: F
@@ -110,6 +114,140 @@ pub fn getNestedMatch<S, T: MatchType>(matcher: T, function: impl 'static + Clon
         matcher,
         function
     }
+}
+
+trait DynMatchOptionType<S: 'static> {
+    fn getMatchValue(&self, startPos: ModulePos) -> Option<Match<S>>;
+    fn cloneDynamic(&self) -> Box<dyn DynMatchOptionType<S>>;
+}
+
+impl<S: 'static> Clone for Box<dyn DynMatchOptionType<S>> {
+    fn clone(&self) -> Self {
+        return self.cloneDynamic();
+    }
+}
+
+struct DynMatchOption<S: 'static, T: 'static, F: 'static + MatchType<Value = T>, M: 'static + Clone + Fn(&ModuleRange, T) -> Option<S>> {
+    matchType: F,
+    mappingFunction: M,
+}
+
+impl<S: 'static, T: 'static, F: 'static + MatchType<Value = T>, M: 'static + Clone + Fn(&ModuleRange, T) -> Option<S>> DynMatchOptionType<S> for DynMatchOption<S, T, F, M> {
+    fn getMatchValue(&self, startPos: ModulePos) -> Option<Match<S>> {
+        let (range, v) = self.matchType.getMatch(startPos)?.take();
+        let mappedValue = (self.mappingFunction)(&range, v)?;
+        return Some(Match::new(range, mappedValue));
+    }
+
+    fn cloneDynamic(&self) -> Box<dyn DynMatchOptionType<S>> {
+        return Box::new(Self {
+            matchType: self.matchType.to_owned(),
+            mappingFunction: self.mappingFunction.to_owned(),
+        });
+    }
+}
+
+pub struct MatchOption<S: 'static> {
+    matchOption: Box<dyn DynMatchOptionType<S>>,
+}
+
+impl<S: 'static> Clone for MatchOption<S> {
+    fn clone(&self) -> Self {
+        return Self {
+            matchOption: self.matchOption.to_owned()
+        };
+    }
+}
+
+impl<S: 'static> MatchOption<S> {
+    pub fn new<T: 'static, F: 'static + MatchType<Value = T>, M: 'static + Clone + Fn(&ModuleRange, T) -> Option<S>>(matchType: F, mappingFunction: M) -> Self {
+        return Self {
+            matchOption: Box::new(DynMatchOption {
+                matchType,
+                mappingFunction,
+            })
+        };
+    }
+}
+
+pub fn getMatchAnyOf<S: 'static>(options: &[MatchOption<S>], conflictResolver: impl 'static + Clone + Fn(Vec<Match<S>>) -> Option<Match<S>>) -> impl MatchType<Value = S> {
+    struct MatchOptionType<S: 'static, R: 'static + Clone + Fn(Vec<Match<S>>) -> Option<Match<S>>>(Vec<MatchOption<S>>, R);
+
+    impl<S: 'static, R: 'static + Clone + Fn(Vec<Match<S>>) -> Option<Match<S>>> Clone for MatchOptionType<S, R> {
+        fn clone(&self) -> Self {
+            return Self {
+                0: self.0.to_owned(),
+                1: self.1.to_owned(),
+            };
+        }
+    }
+    impl<S: 'static, R: 'static + Clone + Fn(Vec<Match<S>>) -> Option<Match<S>>> MatchType for MatchOptionType<S, R> {
+        type Value = S;
+
+        fn getMatch(&self, startPos: ModulePos) -> Option<Match<Self::Value>> {
+            let mut matchVec = Vec::new();
+            for matchOption in &self.0 {
+                if let Some(matched) = matchOption.matchOption.getMatchValue(startPos.to_owned()) {
+                    matchVec.push(matched);
+                }
+            }
+            return (self.1)(matchVec);
+        }
+    }
+
+    return MatchOptionType(options.to_vec(), conflictResolver);
+}
+
+pub fn getMatchOneOf<S: 'static>(options: &[MatchOption<S>]) -> impl MatchType<Value = S> {
+    return getMatchAnyOf(options,|mut options| {
+        if options.len() == 1 {
+            Some(options.pop().unwrap())
+        } else {
+            None
+        }
+    });
+}
+
+pub fn getRepeatingMatch<S>(minimum: usize, matchValue: impl MatchType<Value = S>) -> impl MatchType<Value = Vec<S>> {
+    struct MatchRepeat<T: MatchType<Value = S>, S>(usize, T);
+
+    impl<T: MatchType<Value = S>, S> Clone for MatchRepeat<T, S> {
+        fn clone(&self) -> Self {
+            return Self {
+                0: self.0,
+                1: self.1.to_owned(),
+            };
+        }
+    }
+
+    impl<T: MatchType<Value = S>, S> MatchType for MatchRepeat<T, S> {
+        type Value = Vec<S>;
+
+        fn getMatch(&self, startPos: ModulePos) -> Option<Match<Self::Value>> {
+            let mut matchVec = Vec::new();
+            let endPos = startPos.getModule().getModulePos(startPos.getModule().getTokenVector().len());
+            let mut pos = startPos.to_owned();
+
+            while pos != endPos {
+                let nextMatch = self.1.getMatch(pos.to_owned());
+                if let Some(nextMatch) = nextMatch {
+                    let (range, value) = nextMatch.take();
+                    pos = range.getEndPos();
+                    matchVec.push(value);
+                } else {
+                    break;
+                }
+            }
+
+            return if matchVec.len() < self.0 {
+                None
+            } else {
+                Some(Match::new(startPos.getModule().getModuleRange(startPos.getTokenIndex()..pos.getTokenIndex()), matchVec))
+            };
+        }
+    }
+
+    return MatchRepeat(minimum, matchValue);
 }
 
 pub trait TupleAppend {
