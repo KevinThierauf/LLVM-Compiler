@@ -1,5 +1,5 @@
-use crate::module::modulepos::{ModulePos, ModuleRange};
 use crate::ast::symbol::SymbolType;
+use crate::module::modulepos::{ModulePos, ModuleRange};
 
 #[derive(Debug)]
 pub struct ImportSym {

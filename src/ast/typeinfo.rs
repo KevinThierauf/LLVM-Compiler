@@ -58,5 +58,4 @@ impl PartialEq<Self> for Type {
     }
 }
 
-impl Eq for Type {
-}
+impl Eq for Type {}

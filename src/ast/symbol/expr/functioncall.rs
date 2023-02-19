@@ -1,6 +1,6 @@
-use crate::module::modulepos::{ModulePos, ModuleRange};
 use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::SymbolType;
+use crate::module::modulepos::{ModulePos, ModuleRange};
 
 #[derive(Debug)]
 pub struct FunctionCallExpr {
@@ -15,5 +15,4 @@ impl SymbolType for FunctionCallExpr {
     }
 }
 
-impl ExprType for FunctionCallExpr {
-}
+impl ExprType for FunctionCallExpr {}

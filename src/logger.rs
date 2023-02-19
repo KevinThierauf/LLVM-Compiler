@@ -1,10 +1,12 @@
-pub mod message;
-
 use std::mem::swap;
 use std::sync::Arc;
+
 use hashbrown::HashSet;
 use parking_lot::Mutex;
+
 use crate::logger::message::{CoreMessageType, MessageType};
+
+pub mod message;
 
 struct LogInternal {
     returnedMessages: Vec<Box<dyn MessageType>>,
@@ -61,7 +63,7 @@ impl Logger {
 
 pub struct LogGroup {
     logger: Logger,
-    messageVec: Vec<Box<dyn MessageType>>
+    messageVec: Vec<Box<dyn MessageType>>,
 }
 
 impl LogGroup {

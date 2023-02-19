@@ -1,8 +1,8 @@
-use crate::module::modulepos::ModuleRange;
 use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::SymbolType;
 use crate::ast::typeinfo::Type;
+use crate::module::modulepos::ModuleRange;
 
 #[derive(Debug)]
 pub struct LiteralTuple {

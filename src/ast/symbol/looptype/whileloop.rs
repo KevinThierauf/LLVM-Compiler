@@ -8,7 +8,7 @@ use crate::module::modulepos::ModuleRange;
 pub struct WhileLoop {
     range: ModuleRange,
     conditional: Expr,
-    label: Option<Label>
+    label: Option<Label>,
 }
 
 impl SymbolType for WhileLoop {

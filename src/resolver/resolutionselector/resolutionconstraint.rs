@@ -1,6 +1,6 @@
+use crate::ast::typeinfo::Type;
 use crate::module::modulepos::ModuleRange;
 use crate::resolver::resolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
-use crate::ast::typeinfo::Type;
 
 pub const DEFAULT_RESOLUTION_PRIORITY: u16 = 0;
 pub const NO_IMPLICIT_CONVERSION: u16 = DEFAULT_RESOLUTION_PRIORITY + 100;

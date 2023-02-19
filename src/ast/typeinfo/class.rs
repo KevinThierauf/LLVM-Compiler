@@ -1,2 +1,1 @@
-pub struct ClassTypeInfo {
-}
+pub struct ClassTypeInfo {}

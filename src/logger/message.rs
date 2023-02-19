@@ -38,8 +38,7 @@ impl CoreMessage {
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
-pub enum CoreMessageType {
-}
+pub enum CoreMessageType {}
 
 impl CoreMessageType {
     pub fn getParentMessageType(&self) -> &'static [CoreMessageType] {

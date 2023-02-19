@@ -12,7 +12,14 @@ pub struct OperatorExpr {
 
 impl OperatorExpr {
     pub fn getFromComponents(components: Vec<OperationComponent>) -> Option<Self> {
-        todo!()
+        Some(Self {
+            range: match components.get(0)? {
+                OperationComponent::Operator(r, _) => r.to_owned(),
+                OperationComponent::Expression(v) => v.getRange().to_owned()
+            },
+            operands: Box::new([]),
+            operator: Operator::Increment,
+        })
     }
 }
 
@@ -22,10 +29,10 @@ impl SymbolType for OperatorExpr {
     }
 }
 
-impl ExprType for OperatorExpr {
-}
+impl ExprType for OperatorExpr {}
 
+#[derive(Debug)]
 pub enum OperationComponent {
-    Operator(Operator),
+    Operator(ModuleRange, Operator),
     Expression(Expr),
 }

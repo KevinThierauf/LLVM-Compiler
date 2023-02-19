@@ -5,9 +5,9 @@ use std::hash::{Hash, Hasher};
 use hashbrown::HashSet;
 use priority_queue::PriorityQueue;
 
+use crate::ast::typeinfo::Type;
 use crate::module::modulepos::ModuleRange;
 use crate::resolver::resolutionselector::ResolutionError;
-use crate::ast::typeinfo::Type;
 
 #[derive(Debug)]
 struct ConstraintInfo<T> {
@@ -191,7 +191,7 @@ impl ResolutionConstraintSolver {
         }
 
         match currentPriorityVec.len() {
-            0 => {},
+            0 => {}
             1 => return Ok(currentPriorityVec[0].to_owned()),
             _ => return Err(vec![ResolutionError::Ambiguous(currentPriorityVec)]),
         };
@@ -202,7 +202,7 @@ impl ResolutionConstraintSolver {
         if let Some(subsetTypes) = &self.subsetTypes {
             for typeInfo in subsetTypes {
                 if let Some(err) = self.getExcludedRange(&typeInfo.value) {
-                    errorVec.push(ResolutionError::Excluded{ selected: typeInfo.value.to_owned(), excludedRange: err })
+                    errorVec.push(ResolutionError::Excluded { selected: typeInfo.value.to_owned(), excludedRange: err })
                 } else {
                     optionVec.push(&typeInfo.value);
                 }
@@ -277,16 +277,16 @@ impl ResolutionConstraintSolver {
 mod test {
     use std::cell::RefCell;
 
+    use crate::ast::typeinfo::primitive::boolean::BOOLEAN_TYPE;
+    use crate::ast::typeinfo::primitive::character::CHARACTER_TYPE;
+    use crate::ast::typeinfo::Type;
     use crate::module::Module;
     use crate::module::modulepos::ModuleRange;
     use crate::resolver::resolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
     use crate::resolver::resolutionselector::resolutionerror::ResolutionError;
-    use crate::ast::typeinfo::primitive::boolean::BOOLEAN_TYPE;
-    use crate::ast::typeinfo::primitive::character::CHARACTER_TYPE;
-    use crate::ast::typeinfo::Type;
 
     thread_local! {
-        static RANGE: RefCell<ModuleRange> = RefCell::new(Module::new(Vec::new()).getModuleRange(0..0));
+        static RANGE: RefCell<ModuleRange> = RefCell::new(Module::newFrom(Vec::new()).getModuleRange(0..0));
     }
 
     fn getRange() -> ModuleRange {
@@ -404,7 +404,7 @@ mod test {
                 selected: BOOLEAN_TYPE.to_owned(),
                 excludedRange: vec![getRange()],
             },
-            ResolutionError::Eliminated
+            ResolutionError::Eliminated,
         ]));
     }
 

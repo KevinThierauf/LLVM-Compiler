@@ -1,28 +1,87 @@
+use std::cmp::min;
+use std::rc::Rc;
+
+use crate::ast::symbol::Symbol;
+use crate::ast::tokensource::tokenparser::parseTokenVec;
+use crate::module::{Module, TokenType, TokenTypeDiscriminants};
+use crate::module::modulepos::ModulePos;
+
 pub mod conflictresolution;
 pub mod tokenparser;
 pub mod symbolparser;
 mod matchers;
 
-use std::rc::Rc;
-use crate::ast::symbol::Symbol;
-use crate::ast::tokensource::tokenparser::parseTokenVec;
-use crate::module::Module;
-
 pub enum ASTError {
-    NoMatch,
+    // misc match fail
+    MatchFailed(ModulePos),
+    // failed to match symbol
+    ExpectedSymbol(ModulePos),
+    // position, exact token expected
+    ExpectedToken(ModulePos, TokenType),
+    // position, token type discriminant
+    ExpectedTokenDiscriminant(ModulePos, TokenTypeDiscriminants),
+    // expected token to be exclusive in module, found extraneous symbols
+    ExpectedExclusive(ModulePos, Option<TokenTypeDiscriminants>),
     // conflict resolution returned multiple
-    MultipleConflict,
+    MultipleConflict(ModulePos, Vec<String>),
     // conflict resolution returned none
-    EliminatedConflict,
+    EliminatedConflict(ModulePos),
 }
 
 impl ASTError {
-    pub fn getDisplayMessage(&self) -> String {
+    pub fn getErrorMessage(&self) -> String {
         return match self {
-            ASTError::NoMatch => "failed to match symbol".to_owned(),
-            ASTError::MultipleConflict => "conflict resolution returned multiple potential symbols".to_owned(),
-            ASTError::EliminatedConflict => "could not determine appropriate symbol from multiple conflicting matches".to_owned(),
+            ASTError::MatchFailed(pos) => format!("failed to find match at {pos:?}"),
+            ASTError::ExpectedSymbol(pos) => format!("failed to match symbol (at {pos:?})"),
+            ASTError::ExpectedToken(pos, expected) => format!("expected {expected:?} at {pos:?}, found {:?}", pos.getToken()),
+            ASTError::ExpectedTokenDiscriminant(pos, expected) => format!("expected {expected:?} at {pos:?}, found {:?}", pos.getToken()),
+            ASTError::ExpectedExclusive(pos, expected) => if let Some(expected) = expected {
+                format!("expected single {expected:?} token, found extra {:?} token", pos.getToken())
+            } else {
+                format!("expected single token, found extra {:?} token", pos.getToken())
+            },
+            ASTError::MultipleConflict(pos, options) => format!("conflict resolution returned multiple potential symbols at {pos:?}: {options:?}"),
+            ASTError::EliminatedConflict(pos) => format!("cannot determine appropriate symbol from multiple conflicting matches at {pos:?}; all possibilities eliminated"),
         };
+    }
+
+    pub fn getModulePos(&self) -> &ModulePos {
+        return match self {
+            ASTError::MatchFailed(pos) |
+            ASTError::ExpectedSymbol(pos) |
+            ASTError::ExpectedToken(pos, _) |
+            ASTError::ExpectedTokenDiscriminant(pos, _) |
+            ASTError::ExpectedExclusive(pos, _) |
+            ASTError::MultipleConflict(pos, _) |
+            ASTError::EliminatedConflict(pos) => pos
+        };
+    }
+
+    pub fn getTokenSource(&self) -> (String, usize) {
+        const PREVIOUS_TOKENS: usize = 5;
+        const NEXT_TOKENS: usize = 5;
+
+        let pos = self.getModulePos();
+        let mut range = pos.getRange(min(pos.getModule().getTokenVector().len(), pos.getTokenIndex() + NEXT_TOKENS) - pos.getTokenIndex());
+        range.setStartIndex(range.getStartIndex().saturating_sub(PREVIOUS_TOKENS));
+
+        let mut source = String::new();
+        let mut sourceIndex = 0;
+        let tokens = range.getTokens();
+        for tokenIndex in 0..tokens.len() {
+            let token = &tokens[tokenIndex];
+            source += token.getSourceRange().getSourceInRange();
+            if tokenIndex == pos.getTokenIndex() - range.getStartIndex() {
+                sourceIndex = source.len();
+            }
+        }
+
+        return (source.replace('\n', " ").replace('\r', " "), sourceIndex);
+    }
+
+    pub fn getDisplayMessage(&self) -> String {
+        let (source, index) = self.getTokenSource();
+        return format!("error: {}\n\t(at {:?})\n\t> \"{}\"\n\t {}", self.getErrorMessage(), self.getModulePos(), source, " ".repeat(index) + "^");
     }
 }
 

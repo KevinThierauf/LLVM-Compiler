@@ -65,7 +65,7 @@ pub struct FilePos {
 
 impl FilePos {
     pub fn new(sourceFile: SourceFile, index: usize) -> Self {
-        assert!(index < sourceFile.fileInfo.fileSource.len(), "invalid index");
+        assert!(index <= sourceFile.fileInfo.fileSource.len(), "invalid index {index} ({})", sourceFile.fileInfo.fileSource.len());
         return Self {
             index,
             sourceFile,

@@ -1,6 +1,6 @@
-use crate::module::modulepos::ModuleRange;
 use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::SymbolType;
+use crate::module::modulepos::ModuleRange;
 
 #[derive(Debug)]
 pub struct VariableExpr {
@@ -13,5 +13,4 @@ impl SymbolType for VariableExpr {
     }
 }
 
-impl ExprType for VariableExpr {
-}
+impl ExprType for VariableExpr {}

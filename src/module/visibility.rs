@@ -12,6 +12,6 @@ impl Visibility {
             Keyword::Public => Some(Visibility::Public),
             Keyword::Private => Some(Visibility::Private),
             _ => None,
-        }
+        };
     }
 }

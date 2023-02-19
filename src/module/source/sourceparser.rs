@@ -6,6 +6,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumCount, EnumIter, EnumString};
+
 use crate::module::{Module, ParseError};
 use crate::module::source::filepos::{FilePos, FileRange, SourceFile};
 use crate::module::source::sourceparser::BasicToken::*;
@@ -286,10 +287,6 @@ impl ParserTokenVec {
         self.commaTokenVec.push(nextVec);
     }
 
-    fn addTokenRange(&mut self, tokenType: TokenType, range: FileRange) {
-        self.currentCommaVec.push(Token::new(tokenType, range));
-    }
-
     fn takeTokenVec(mut self, nextCharacterIndex: usize) -> Vec<Token> {
         self.foldCommaVec(nextCharacterIndex);
         return self.tokenVec;
@@ -377,10 +374,14 @@ impl SourceParser {
         return self.getErrorRange(self.getBasicTokenRange(), message);
     }
 
-    fn addToken(&mut self, tokenType: TokenType) {
-        self.parserVec.addTokenRange(tokenType, self.getFileRange(self.lastTokenStart..self.nextCharacterIndex));
+    fn addTokenRange(&mut self, tokenType: TokenType, range: FileRange) {
+        self.parserVec.currentCommaVec.push(Token::new(tokenType, range));
         self.resetBasicToken();
         self.lastTokenStart = self.nextCharacterIndex;
+    }
+
+    fn addToken(&mut self, tokenType: TokenType) {
+        self.addTokenRange(tokenType, self.getFileRange(self.lastTokenStart..self.nextCharacterIndex));
     }
 
     fn addBasicTokenExcludeLastChar(&mut self, skipCurrent: bool) -> Result<(), ParseError> {
@@ -574,7 +575,7 @@ impl SourceParser {
                     match self.parenthesisSet.pop(parenthesisType) {
                         Ok((parentTokenVec, openIndex)) => {
                             let tokenVec = self.parserVec.makeParent(self.nextCharacterIndex, parentTokenVec);
-                            self.parserVec.addTokenRange(TokenType::Parenthesis(parenthesisType, Module::newFrom(tokenVec)), self.getFileRange(openIndex..self.nextCharacterIndex));
+                            self.addTokenRange(TokenType::Parenthesis(parenthesisType, Module::newFrom(tokenVec)), self.getFileRange(openIndex..self.nextCharacterIndex));
                         }
                         Err(err) => {
                             return Err(self.getErrorBasicTokenRange(if let Some(parenthesis) = err {

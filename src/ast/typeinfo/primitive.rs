@@ -5,5 +5,4 @@ pub mod float;
 pub mod character;
 pub mod boolean;
 
-pub trait PrimitiveTypeInfo: TypeInfo {
-}
+pub trait PrimitiveTypeInfo: TypeInfo {}

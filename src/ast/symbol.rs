@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+
 use strum_macros::EnumDiscriminants;
 use strum_macros::EnumIter;
 
@@ -17,6 +18,8 @@ use crate::ast::symbol::expr::literal::literalstring::LiteralString;
 use crate::ast::symbol::expr::literal::literaltuple::LiteralTuple;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::expr::literal::literalvoid::LiteralVoid;
+use crate::ast::symbol::expr::memberaccessexpr::MemberAccessExpr;
+use crate::ast::symbol::expr::methodcallexpr::MethodCallExpr;
 use crate::ast::symbol::expr::operatorexpr::OperatorExpr;
 use crate::ast::symbol::expr::parenthesisexpr::ParenthesisExpr;
 use crate::ast::symbol::expr::variabledeclaration::VariableDeclarationExpr;
@@ -69,6 +72,8 @@ pub enum Symbol {
     Parenthesis(ParenthesisExpr),
     VariableDeclaration(VariableDeclarationExpr),
     Variable(VariableExpr),
+    MemberAccess(MemberAccessExpr),
+    MethodCall(MethodCallExpr),
     //  literal
     LiteralArray(LiteralArray),
     LiteralBool(LiteralBool),
@@ -107,6 +112,8 @@ impl Symbol {
             Symbol::Loop(symbol) => symbol,
             Symbol::For(symbol) => symbol,
             Symbol::Return(symbol) => symbol,
+            Symbol::MemberAccess(symbol) => symbol,
+            Symbol::MethodCall(symbol) => symbol,
         };
     }
 
@@ -128,6 +135,8 @@ impl Symbol {
             Symbol::Parenthesis(symbol) => Some(symbol),
             Symbol::VariableDeclaration(symbol) => Some(symbol),
             Symbol::Variable(symbol) => Some(symbol),
+            Symbol::MemberAccess(symbol) => Some(symbol),
+            Symbol::MethodCall(symbol) => Some(symbol),
             Symbol::LiteralArray(symbol) => Some(symbol),
             Symbol::LiteralBool(symbol) => Some(symbol),
             Symbol::LiteralChar(symbol) => Some(symbol),
@@ -156,6 +165,8 @@ impl Symbol {
             Symbol::Loop(_) |
             Symbol::For(_) |
             Symbol::Return(_) |
+            Symbol::MemberAccess(_) |
+            Symbol::MethodCall(_) |
             Symbol::Variable(_) => None,
             Symbol::LiteralArray(symbol) => Some(symbol),
             Symbol::LiteralBool(symbol) => Some(symbol),

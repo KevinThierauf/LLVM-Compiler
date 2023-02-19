@@ -1,5 +1,5 @@
-use crate::module::modulepos::ModuleRange;
 use crate::ast::typeinfo::Type;
+use crate::module::modulepos::ModuleRange;
 
 #[derive(Debug)]
 #[cfg_attr(debug_assertions, derive(Eq, PartialEq, Ord, PartialOrd))]

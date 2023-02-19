@@ -1,5 +1,5 @@
-use crate::module::modulepos::ModuleRange;
 use crate::ast::symbol::{Symbol, SymbolType};
+use crate::module::modulepos::ModuleRange;
 
 #[derive(Debug)]
 pub struct BlockSym {

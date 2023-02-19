@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
+
 use once_cell::sync::Lazy;
+
 use crate::ast::typeinfo::{Type, TypeInfo};
 
 pub static CHARACTER_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Character { phantom: PhantomData })));

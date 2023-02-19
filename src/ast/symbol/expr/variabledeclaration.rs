@@ -15,5 +15,4 @@ impl SymbolType for VariableDeclarationExpr {
     }
 }
 
-impl ExprType for VariableDeclarationExpr {
-}
+impl ExprType for VariableDeclarationExpr {}

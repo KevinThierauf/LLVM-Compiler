@@ -1,10 +1,10 @@
-use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::{Symbol, SymbolType};
+use crate::ast::symbol::expr::Expr;
 use crate::module::modulepos::ModuleRange;
 
 #[derive(Debug)]
 pub struct ElseSym {
-    pub symbol: Symbol
+    pub symbol: Symbol,
 }
 
 #[derive(Debug)]

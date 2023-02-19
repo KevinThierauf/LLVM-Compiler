@@ -1,8 +1,10 @@
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
+use std::ops::Deref;
+use std::path::PathBuf;
 use std::rc::Rc;
 
-use crate::module::{Module, Token};
+use crate::module::{FilePos, FileRange, Module, SourceFile, Token, TokenType};
 
 #[derive(Clone, Hash)]
 pub struct ModulePos {
@@ -37,8 +39,12 @@ impl Ord for ModulePos {
 
 impl Debug for ModulePos {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "Module{:?}:{}", self.module.moduleId, self.getTokenIndex());
+        return write!(f, "Module({:?}):{}", self.module.moduleId, self.getTokenIndex());
     }
+}
+
+thread_local! {
+    static EMPTY_TOKEN: Rc<Token> = Rc::new(Token::new(TokenType::SemiColan, FileRange::new(FilePos::new(SourceFile::fromSource(PathBuf::new(), String::new()), 0), 0)));
 }
 
 impl ModulePos {
@@ -50,8 +56,17 @@ impl ModulePos {
         return self.tokenIndex;
     }
 
+    pub fn setTokenIndex(&mut self, index: usize) {
+        debug_assert!(index <= self.module.tokenVec.len());
+        self.tokenIndex = index;
+    }
+
     pub fn getToken(&self) -> &Token {
-        return &self.module.getTokenVector()[self.tokenIndex];
+        return if self.tokenIndex == self.getModule().getTokenVector().len() {
+            EMPTY_TOKEN.with(|reference| unsafe { std::mem::transmute(reference.deref()) })
+        } else {
+            &self.module.getTokenVector()[self.tokenIndex]
+        };
     }
 
     pub fn getRange(&self, length: usize) -> ModuleRange {
@@ -67,7 +82,7 @@ pub struct ModuleRange {
 
 impl Debug for ModuleRange {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "Module{:?}:{} (through {})", self.startPos.getModule().moduleId, self.getStartIndex(), self.getEndIndex());
+        return write!(f, "Module({:?}):{} (through {})", self.startPos.getModule().moduleId, self.getStartIndex(), self.getEndIndex());
     }
 }
 
@@ -94,6 +109,10 @@ impl ModuleRange {
 
     pub fn getLength(&self) -> usize {
         return self.length;
+    }
+
+    pub fn getTokens(&self) -> &[Token] {
+        return &self.getModule().getTokenVector()[self.getStartIndex()..self.getEndIndex()];
     }
 
     pub fn setStartIndex(&mut self, index: usize) {
