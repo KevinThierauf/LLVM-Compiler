@@ -150,7 +150,7 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
         MatchOption::new(getMatchLiteralTuple(), |_, v| Some(Symbol::LiteralTuple(v))),
     ], |mut matchVec| {
         let index = resolveConflict(matchVec.iter().map(|symbolMatch| {
-            symbolMatch.getValue().getSymbolType()
+            symbolMatch.getValue()
         })).ok()?;
         return Some(matchVec.swap_remove(index));
     });
