@@ -16,16 +16,18 @@ pub enum ASTError {
     MatchFailed(ModulePos),
     // failed to match symbol
     ExpectedSymbol(ModulePos),
-    // position, exact token expected
+    // position, expected exact token
     ExpectedToken(ModulePos, TokenType),
-    // position, token type discriminant
+    // position, expected token type discriminant
     ExpectedTokenDiscriminant(ModulePos, TokenTypeDiscriminants),
     // expected token to be exclusive in module, found extraneous symbols
     ExpectedExclusive(ModulePos, Option<TokenTypeDiscriminants>),
     // conflict resolution returned multiple
     MultipleConflict(ModulePos, Vec<String>),
     // conflict resolution returned none
-    EliminatedConflict(ModulePos),
+    EliminatedConflict(ModulePos, Vec<String>),
+    // all potential matches failed
+    MatchOptionsFailed(ModulePos, Vec<ASTError>),
 }
 
 impl ASTError {
@@ -41,7 +43,8 @@ impl ASTError {
                 format!("expected single token, found extra {:?} token", pos.getToken())
             },
             ASTError::MultipleConflict(pos, options) => format!("conflict resolution returned multiple potential symbols at {pos:?}: {options:?}"),
-            ASTError::EliminatedConflict(pos) => format!("cannot determine appropriate symbol from multiple conflicting matches at {pos:?}; all possibilities eliminated"),
+            ASTError::EliminatedConflict(pos, options) => format!("cannot determine appropriate symbol from multiple conflicting matches at {pos:?}; all possibilities eliminated ({options:?})"),
+            ASTError::MatchOptionsFailed(pos, options) => format!("all potential matches failed at {pos:?}{}", options.iter().map(|err| format!("\n\t{}", err.getDisplayMessage().replace('\n', "\n\t"))).collect::<Vec<String>>().join("")),
         };
     }
 
@@ -53,7 +56,8 @@ impl ASTError {
             ASTError::ExpectedTokenDiscriminant(pos, _) |
             ASTError::ExpectedExclusive(pos, _) |
             ASTError::MultipleConflict(pos, _) |
-            ASTError::EliminatedConflict(pos) => pos
+            ASTError::EliminatedConflict(pos, _) => pos,
+            ASTError::MatchOptionsFailed(pos, _) => pos,
         };
     }
 
@@ -76,7 +80,7 @@ impl ASTError {
             }
         }
 
-        return (source.replace('\n', " ").replace('\r', " "), sourceIndex);
+        return (source.replace('\n', " ").replace('\r', ""), sourceIndex);
     }
 
     pub fn getDisplayMessage(&self) -> String {

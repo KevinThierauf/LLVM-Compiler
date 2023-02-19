@@ -58,6 +58,10 @@ impl<'a> ConflictResolver<'a> {
     }
 
     fn getResolved(mut self) -> Result<usize, ASTError> {
+        if self.options.is_empty() {
+            return Err(ASTError::MatchFailed(self.pos));
+        }
+
         let mut preferVec = Vec::new();
         swap(&mut self.preferVec, &mut preferVec);
         for (preferred, over) in preferVec {
@@ -67,7 +71,7 @@ impl<'a> ConflictResolver<'a> {
         }
 
         return match self.indexVec.as_slice() {
-            [] => Err(ASTError::EliminatedConflict(self.pos)),
+            [] => Err(ASTError::EliminatedConflict(self.pos, self.options.into_iter().map(|symbol| format!("{:?}", symbol)).collect())),
             [index] => Ok(*index),
             _ => Err(ASTError::MultipleConflict(self.pos, self.indexVec.into_iter().map(|index| format!("{:?}", self.options[index])).collect())),
         };

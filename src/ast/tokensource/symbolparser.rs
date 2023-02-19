@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::fmt::{Debug, Formatter};
-use std::ops::Deref;
 
 use crate::ast::ASTError;
 use crate::module::modulepos::{ModulePos, ModuleRange};
@@ -8,6 +7,7 @@ use crate::module::modulepos::{ModulePos, ModuleRange};
 pub trait MatchType: Clone + Debug {
     type Value: Debug;
 
+    fn getDescription(&self) -> String;
     fn getMatch(&self, startPos: ModulePos) -> Result<Match<Self::Value>, ASTError>;
 }
 
@@ -52,6 +52,10 @@ impl<T: MatchType> OptionalMatch<T> {
 impl<T: Debug + MatchType> MatchType for OptionalMatch<T> {
     type Value = Option<T::Value>;
 
+    fn getDescription(&self) -> String {
+        return format!("Optional({})", self.0.getDescription());
+    }
+
     fn getMatch(&self, startPos: ModulePos) -> Result<Match<Self::Value>, ASTError> {
         return Ok(if let Ok(matched) = self.0.getMatch(startPos.to_owned()) {
             let (range, value) = matched.take();
@@ -62,8 +66,9 @@ impl<T: Debug + MatchType> MatchType for OptionalMatch<T> {
     }
 }
 
-pub fn getMatchFrom<S: Debug>(function: impl 'static + Clone + Fn(ModulePos) -> Result<Match<S>, ASTError>) -> impl MatchType<Value = S> {
+pub fn getMatchFrom<S: Debug>(description: String, function: impl 'static + Clone + Fn(ModulePos) -> Result<Match<S>, ASTError>) -> impl MatchType<Value = S> {
     struct MatchImpl<F: 'static + Clone + Fn(ModulePos) -> Result<Match<S>, ASTError>, S> {
+        description: String,
         function: F,
     }
 
@@ -76,6 +81,7 @@ pub fn getMatchFrom<S: Debug>(function: impl 'static + Clone + Fn(ModulePos) -> 
     impl<F: 'static + Clone + Fn(ModulePos) -> Result<Match<S>, ASTError>, S> Clone for MatchImpl<F, S> {
         fn clone(&self) -> Self {
             return Self {
+                description: self.description.to_owned(),
                 function: self.function.to_owned(),
             };
         }
@@ -84,12 +90,17 @@ pub fn getMatchFrom<S: Debug>(function: impl 'static + Clone + Fn(ModulePos) -> 
     impl<F: 'static + Clone + Fn(ModulePos) -> Result<Match<S>, ASTError>, S: Debug> MatchType for MatchImpl<F, S> {
         type Value = S;
 
+        fn getDescription(&self) -> String {
+            return self.description.to_owned();
+        }
+
         fn getMatch(&self, startPos: ModulePos) -> Result<Match<Self::Value>, ASTError> {
             return (self.function)(startPos);
         }
     }
 
     return MatchImpl {
+        description,
         function
     };
 }
@@ -118,6 +129,10 @@ pub fn getMappedMatch<S: Debug, T: MatchType>(matcher: T, function: impl 'static
     impl<S: Debug, T: MatchType, F: 'static + Clone + Fn(ModuleRange, T::Value) -> Result<S, ASTError>> MatchType for MatchNested<S, T, F> {
         type Value = S;
 
+        fn getDescription(&self) -> String {
+            return self.matcher.getDescription();
+        }
+
         fn getMatch(&self, startPos: ModulePos) -> Result<Match<Self::Value>, ASTError> {
             let matched = self.matcher.getMatch(startPos)?;
             let (range, value) = matched.take();
@@ -132,6 +147,7 @@ pub fn getMappedMatch<S: Debug, T: MatchType>(matcher: T, function: impl 'static
 }
 
 trait DynMatchOptionType<S: 'static> {
+    fn getDescription(&self) -> String;
     fn getMatchValue(&self, startPos: ModulePos) -> Result<Match<S>, ASTError>;
     fn cloneDynamic(&self) -> Box<dyn DynMatchOptionType<S>>;
 }
@@ -148,6 +164,10 @@ struct DynMatchOption<S: 'static, T: 'static, F: 'static + MatchType<Value = T>,
 }
 
 impl<S: 'static + Debug, T: 'static + Debug, F: 'static + MatchType<Value = T>, M: 'static + Clone + Fn(&ModuleRange, T) -> Result<S, ASTError>> DynMatchOptionType<S> for DynMatchOption<S, T, F, M> {
+    fn getDescription(&self) -> String {
+        return self.matchType.getDescription();
+    }
+
     fn getMatchValue(&self, startPos: ModulePos) -> Result<Match<S>, ASTError> {
         let (range, v) = self.matchType.getMatch(startPos)?.take();
         let mappedValue = (self.mappingFunction)(&range, v)?;
@@ -185,16 +205,16 @@ impl<S: 'static + Debug> MatchOption<S> {
     }
 }
 
-pub fn getMatchAnyOf<S: 'static + Debug>(options: &[MatchOption<S>], conflictResolver: impl 'static + Clone + Fn(ModulePos, Vec<Match<S>>) -> Result<Match<S>, ASTError>) -> impl MatchType<Value = S> {
-    struct MatchOptionType<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>) -> Result<Match<S>, ASTError>>(Vec<MatchOption<S>>, R);
+pub fn getMatchAnyOf<S: 'static + Debug>(options: &[MatchOption<S>], conflictResolver: impl 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<ASTError>) -> Result<Match<S>, ASTError>) -> impl MatchType<Value = S> {
+    struct MatchOptionType<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<ASTError>) -> Result<Match<S>, ASTError>>(Vec<MatchOption<S>>, R);
 
-    impl<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>) -> Result<Match<S>, ASTError>> Debug for MatchOptionType<S, R> {
+    impl<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<ASTError>) -> Result<Match<S>, ASTError>> Debug for MatchOptionType<S, R> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             return writeln!(f, "getMatchAnyOf()");
         }
     }
 
-    impl<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>) -> Result<Match<S>, ASTError>> Clone for MatchOptionType<S, R> {
+    impl<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<ASTError>) -> Result<Match<S>, ASTError>> Clone for MatchOptionType<S, R> {
         fn clone(&self) -> Self {
             return Self {
                 0: self.0.to_owned(),
@@ -202,17 +222,24 @@ pub fn getMatchAnyOf<S: 'static + Debug>(options: &[MatchOption<S>], conflictRes
             };
         }
     }
-    impl<S: 'static + Debug, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>) -> Result<Match<S>, ASTError>> MatchType for MatchOptionType<S, R> {
+    impl<S: 'static + Debug, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<ASTError>) -> Result<Match<S>, ASTError>> MatchType for MatchOptionType<S, R> {
         type Value = S;
+
+        fn getDescription(&self) -> String {
+            return format!("Any({:?})", self.0.iter().map(|option| option.matchOption.getDescription()).collect::<Vec<String>>());
+        }
 
         fn getMatch(&self, startPos: ModulePos) -> Result<Match<Self::Value>, ASTError> {
             let mut matchVec = Vec::new();
+            let mut errVec = Vec::new();
             for matchOption in &self.0 {
-                if let Ok(matched) = matchOption.matchOption.getMatchValue(startPos.to_owned()) {
-                    matchVec.push(matched);
+                match matchOption.matchOption.getMatchValue(startPos.to_owned()) {
+                    Ok(matched) => matchVec.push(matched),
+                    Err(err) => errVec.push(err),
                 }
             }
-            return (self.1)(startPos, matchVec);
+            errVec.retain(|err| err.getModulePos() != &startPos);
+            return (self.1)(startPos, matchVec, errVec);
         }
     }
 
@@ -220,11 +247,11 @@ pub fn getMatchAnyOf<S: 'static + Debug>(options: &[MatchOption<S>], conflictRes
 }
 
 pub fn getMatchOneOf<S: 'static + Debug>(options: &[MatchOption<S>]) -> impl MatchType<Value = S> {
-    return getMatchAnyOf(options, |pos, mut options| {
+    return getMatchAnyOf(options, |pos, mut options, err| {
         match options.len() {
-            0 => Err(ASTError::EliminatedConflict(pos)),
+            0 => Err(ASTError::MatchOptionsFailed(pos, err)),
             1 => Ok(options.pop().unwrap()),
-            _ => Err(ASTError::MultipleConflict(pos, options.iter_mut().map(|matchValue| format!("{matchValue:?}")).collect()))
+            _ => Err(ASTError::MultipleConflict(pos, options.iter().map(|matchValue| format!("{matchValue:?}")).collect()))
         }
     });
 }
@@ -233,6 +260,23 @@ pub fn getLazyMatch<S: Debug, M: MatchType<Value = S>>(f: impl 'static + Clone +
     enum MatchLazy<S, M: MatchType<Value = S>, F: 'static + Clone + Fn() -> M> {
         Initialized(M),
         Uninitialized(F),
+    }
+
+    impl<S, M: MatchType<Value = S>, F: 'static + Clone + Fn() -> M> MatchLazy<S, M, F> {
+        fn getInitialized(&mut self) -> &M {
+            return match self {
+                MatchLazy::Initialized(m) => m,
+                MatchLazy::Uninitialized(f) => {
+                    *self = MatchLazy::Initialized(f());
+
+                    if let MatchLazy::Initialized(m) = self {
+                        m
+                    } else {
+                        unreachable!()
+                    }
+                }
+            };
+        }
     }
 
     impl<S, M: MatchType<Value = S>, F: 'static + Clone + Fn() -> M> Debug for MatchLazy<S, M, F> {
@@ -253,22 +297,12 @@ pub fn getLazyMatch<S: Debug, M: MatchType<Value = S>>(f: impl 'static + Clone +
     impl<S: Debug, M: MatchType<Value = S>, F: 'static + Clone + Fn() -> M> MatchType for RefCell<MatchLazy<S, M, F>> {
         type Value = S;
 
+        fn getDescription(&self) -> String {
+            return self.borrow_mut().getInitialized().getDescription();
+        }
+
         fn getMatch(&self, startPos: ModulePos) -> Result<Match<Self::Value>, ASTError> {
-            let mut borrow = self.borrow_mut();
-            let matchedType = match borrow.deref() {
-                MatchLazy::Initialized(m) => m,
-                MatchLazy::Uninitialized(f) => {
-                    *borrow = MatchLazy::Initialized(f());
-
-                    if let MatchLazy::Initialized(m) = borrow.deref() {
-                        m
-                    } else {
-                        unreachable!()
-                    }
-                }
-            };
-
-            return matchedType.getMatch(startPos);
+            return self.borrow_mut().getInitialized().getMatch(startPos);
         }
     }
 
@@ -290,6 +324,10 @@ pub fn getRepeatingMatch<S: Debug>(minimum: usize, matchValue: impl MatchType<Va
 
     impl<T: MatchType<Value = S>, S: Debug> MatchType for MatchRepeat<T, S> {
         type Value = Vec<S>;
+
+        fn getDescription(&self) -> String {
+            return format!("Repeat({}+, {:?})", self.0, self.1);
+        }
 
         fn getMatch(&self, startPos: ModulePos) -> Result<Match<Self::Value>, ASTError> {
             let mut matchVec = Vec::new();
@@ -343,6 +381,12 @@ macro_rules! TupleMatchType {
         impl<$first: MatchType, $($names: MatchType),*,> MatchType for ($first, $($names),*,) where ($($names),*,): MatchType, <($($names),*, ) as MatchType>::Value: TupleAppend, <<($($names),*,) as MatchType>::Value as TupleAppend>::Append<<$first as MatchType>::Value>: TupleAppend {
             type Value = <<($($names),*,) as MatchType>::Value as TupleAppend>::Append<<$first as MatchType>::Value>;
 
+            fn getDescription(&self) -> String {
+                let ($first, $($names),*) = self;
+                let tuple = ($first.getDescription(), $($names.getDescription()),*);
+                return format!("{tuple:?}");
+            }
+
             fn getMatch(&self, startPos: ModulePos) -> Result<Match<Self::Value>, ASTError> {
                 let ($first, $($names),*) = self;
                 let firstMatch = $first.getMatch(startPos)?;
@@ -369,6 +413,10 @@ impl<T: Debug> TupleAppend for (T, ) {
 
 impl<T: MatchType> MatchType for (T, ) {
     type Value = (T::Value, );
+
+    fn getDescription(&self) -> String {
+        return self.0.getDescription();
+    }
 
     fn getMatch(&self, startPos: ModulePos) -> Result<Match<Self::Value>, ASTError> {
         return self.0.getMatch(startPos).map(|value| {

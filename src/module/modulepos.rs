@@ -44,7 +44,7 @@ impl Debug for ModulePos {
 }
 
 thread_local! {
-    static EMPTY_TOKEN: Rc<Token> = Rc::new(Token::new(TokenType::SemiColan, FileRange::new(FilePos::new(SourceFile::fromSource(PathBuf::new(), String::new()), 0), 0)));
+    static END_TOKEN: Rc<Token> = Rc::new(Token::new(TokenType::SemiColan, FileRange::new(FilePos::new(SourceFile::fromSource(PathBuf::new(), String::new()), 0), 0)));
 }
 
 impl ModulePos {
@@ -63,7 +63,9 @@ impl ModulePos {
 
     pub fn getToken(&self) -> &Token {
         return if self.tokenIndex == self.getModule().getTokenVector().len() {
-            EMPTY_TOKEN.with(|reference| unsafe { std::mem::transmute(reference.deref()) })
+            // END_TOKEN is only valid for the lifetime of the current thread
+            // since Token is not sync, &Token cannot be sent to another thread so it's lifetime is effectively 'static
+            END_TOKEN.with(|reference| unsafe { std::mem::transmute(reference.deref()) })
         } else {
             &self.module.getTokenVector()[self.tokenIndex]
         };
