@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::cmp::{max, min, Ordering};
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 use std::path::PathBuf;
@@ -71,7 +71,7 @@ impl ModulePos {
         };
     }
 
-    pub fn getRange(&self, length: usize) -> ModuleRange {
+    pub fn getRangeWithLength(&self, length: usize) -> ModuleRange {
         return self.module.getModuleRange(self.getTokenIndex()..self.getTokenIndex() + length);
     }
 }
@@ -125,5 +125,16 @@ impl ModuleRange {
     pub fn setEndIndex(&mut self, index: usize) {
         debug_assert!(index >= self.getStartIndex());
         self.length = index - self.getStartIndex();
+    }
+    
+    pub fn getCombined(&self, range: &ModuleRange) -> ModuleRange {
+        assert!(Rc::ptr_eq(self.getModule(), range.getModule()), "cannot combine range across modules");
+        let module = range.getModule().to_owned();
+        let startIndex = min(self.getStartIndex(), range.getStartIndex());
+        let endIndex = max(self.getEndIndex(), range.getEndIndex());
+        return ModuleRange {
+            startPos: module.getModulePos(startIndex),
+            length: endIndex - startIndex,
+        }
     }
 }

@@ -6,9 +6,7 @@ pub mod variableexpr;
 pub mod literal;
 pub mod parenthesisexpr;
 pub mod variabledeclaration;
-pub mod memberaccessexpr;
-pub mod methodcallexpr;
 
-pub trait ExprType: SymbolType {}
+pub trait ExprType: 'static + SymbolType {}
 
 pub type Expr = Box<dyn ExprType>;

@@ -275,8 +275,6 @@ impl ResolutionConstraintSolver {
 
 #[cfg(test)]
 mod test {
-    use std::cell::RefCell;
-
     use crate::ast::typeinfo::primitive::boolean::BOOLEAN_TYPE;
     use crate::ast::typeinfo::primitive::character::CHARACTER_TYPE;
     use crate::ast::typeinfo::Type;
@@ -286,11 +284,11 @@ mod test {
     use crate::resolver::resolutionselector::resolutionerror::ResolutionError;
 
     thread_local! {
-        static RANGE: RefCell<ModuleRange> = RefCell::new(Module::newFrom(Vec::new()).getModuleRange(0..0));
+        static RANGE: ModuleRange = Module::newFrom(Vec::new()).getModuleRange(0..0);
     }
 
     fn getRange() -> ModuleRange {
-        return RANGE.with(|v| v.borrow().to_owned());
+        return RANGE.with(|v| v.to_owned());
     }
 
     fn sortError(error: &mut ResolutionError) {
@@ -382,7 +380,7 @@ mod test {
 
     #[test]
     fn testUnconstrained() {
-        let mut solver = ResolutionConstraintSolver::new();
+        let solver = ResolutionConstraintSolver::new();
         assertEq(solver, Err(vec![ResolutionError::Unconstrained]));
     }
 

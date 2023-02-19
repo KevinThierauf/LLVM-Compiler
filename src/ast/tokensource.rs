@@ -12,21 +12,21 @@ pub mod symbolparser;
 mod matchers;
 
 pub enum ASTError {
-    // misc match fail
+    // miscellaneous
     MatchFailed(ModulePos),
     // failed to match symbol
     ExpectedSymbol(ModulePos),
-    // position, expected exact token
+    // at position expected exact token
     ExpectedToken(ModulePos, TokenType),
-    // position, expected token type discriminant
+    // at position expected token type
     ExpectedTokenDiscriminant(ModulePos, TokenTypeDiscriminants),
     // expected token to be exclusive in module, found extraneous symbols
     ExpectedExclusive(ModulePos, Option<TokenTypeDiscriminants>),
-    // conflict resolution returned multiple
+    // conflict resolution returned multiple possibilities
     MultipleConflict(ModulePos, Vec<String>),
-    // conflict resolution returned none
+    // conflict resolution eliminated all possibilities
     EliminatedConflict(ModulePos, Vec<String>),
-    // all potential matches failed
+    // multiple possibilities, none were able to be matched
     MatchOptionsFailed(ModulePos, Vec<ASTError>),
 }
 
@@ -66,7 +66,7 @@ impl ASTError {
         const NEXT_TOKENS: usize = 5;
 
         let pos = self.getModulePos();
-        let mut range = pos.getRange(min(pos.getModule().getTokenVector().len(), pos.getTokenIndex() + NEXT_TOKENS) - pos.getTokenIndex());
+        let mut range = pos.getRangeWithLength(min(pos.getModule().getTokenVector().len(), pos.getTokenIndex() + NEXT_TOKENS) - pos.getTokenIndex());
         range.setStartIndex(range.getStartIndex().saturating_sub(PREVIOUS_TOKENS));
 
         let mut source = String::new();

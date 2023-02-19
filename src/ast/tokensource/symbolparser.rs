@@ -61,7 +61,7 @@ impl<T: Debug + MatchType> MatchType for OptionalMatch<T> {
             let (range, value) = matched.take();
             Match::new(range, Some(value))
         } else {
-            Match::new(startPos.getRange(0), None)
+            Match::new(startPos.getRangeWithLength(0), None)
         });
     }
 }
@@ -101,7 +101,7 @@ pub fn getMatchFrom<S: Debug>(description: String, function: impl 'static + Clon
 
     return MatchImpl {
         description,
-        function
+        function,
     };
 }
 
