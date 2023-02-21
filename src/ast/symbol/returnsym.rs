@@ -4,12 +4,12 @@ use crate::module::modulepos::ModuleRange;
 
 #[derive(Debug)]
 pub struct ReturnSym {
-    range: ModuleRange,
-    value: Option<Expr>,
+    pub range: ModuleRange,
+    pub value: Option<Expr>,
 }
 
 impl SymbolType for ReturnSym {
     fn getRange(&self) -> &ModuleRange {
-        todo!()
+        return &self.range;
     }
 }

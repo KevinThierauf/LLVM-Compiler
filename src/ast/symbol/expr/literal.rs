@@ -4,7 +4,7 @@ use crate::ast::typeinfo::Type;
 pub mod literalbool;
 pub mod literalarray;
 pub mod literaltuple;
-pub mod literalFloat;
+pub mod literalfloat;
 pub mod literalstring;
 pub mod literalinteger;
 pub mod literalchar;

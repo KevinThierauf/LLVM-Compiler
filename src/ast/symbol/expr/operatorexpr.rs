@@ -1,6 +1,6 @@
 use crate::ast::ASTError;
 use crate::ast::symbol::expr::{Expr, ExprType};
-use crate::ast::symbol::SymbolType;
+use crate::ast::symbol::{Symbol, SymbolType};
 use crate::module::modulepos::{ModulePos, ModuleRange};
 use crate::module::Operator;
 
@@ -29,7 +29,7 @@ impl OperatorExpr {
             range: first.getRange().getCombined(second.getRange()),
             operands: vec![first, second].into_boxed_slice(),
             operator,
-        }
+        };
     }
 
     pub fn unaryOperator(expr: Expr, operator: Operator, operatorPos: ModulePos) -> Self {
@@ -37,7 +37,7 @@ impl OperatorExpr {
             range: expr.getRange().getCombined(&operatorPos.getRangeWithLength(1)),
             operands: vec![expr].into_boxed_slice(),
             operator,
-        }
+        };
     }
 
     pub fn operator(operator: Operator, operatorPos: ModulePos) -> Self {
@@ -45,7 +45,7 @@ impl OperatorExpr {
             range: operatorPos.getRangeWithLength(1),
             operands: Box::new([]),
             operator,
-        }
+        };
     }
 }
 
@@ -55,7 +55,11 @@ impl SymbolType for OperatorExpr {
     }
 }
 
-impl ExprType for OperatorExpr {}
+impl ExprType for OperatorExpr {
+    fn toSymbol(self: Box<Self>) -> Symbol {
+        return Symbol::Operator(*self);
+    }
+}
 
 #[derive(Debug)]
 pub enum OperationComponent {
@@ -197,7 +201,7 @@ mod test {
         let expected = OperatorExpr::binaryExpr(
             Box::new(OperatorExpr::binaryExpr(getExpr(1), Operator::Plus, getExpr(3))),
             Operator::Plus,
-            getExpr(5)
+            getExpr(5),
         );
 
         checkEq(expected, expr);
@@ -217,7 +221,7 @@ mod test {
         let expected = OperatorExpr::binaryExpr(
             Box::new(OperatorExpr::binaryExpr(getExpr(1), Operator::Div, getExpr(3))),
             Operator::Plus,
-            getExpr(5)
+            getExpr(5),
         );
 
         checkEq(expected, expr);
@@ -271,7 +275,7 @@ mod test {
         let expected = OperatorExpr::binaryExpr(
             Box::new(OperatorExpr::unaryOperator(getExpr(1), Operator::Increment, getPosIndex(2))),
             Operator::Div,
-            getExpr(4)
+            getExpr(4),
         );
 
         checkEq(expected, expr);
@@ -296,10 +300,75 @@ mod test {
             Box::new(OperatorExpr::binaryExpr(
                 Box::new(OperatorExpr::unaryOperator(getExpr(1), Operator::Increment, getPosIndex(2))),
                 Operator::Div,
-                getExpr(4)
-            ))
+                getExpr(4),
+            )),
         );
 
         checkEq(expected, expr);
+    }
+
+    #[test]
+    fn testInvalidNoOperators() {
+        // a
+        let expr = OperatorExpr::getFromComponents(getPosIndex(0), vec![
+            getExprComponent(1),
+        ]);
+
+        assert!(expr.is_err());
+    }
+
+    #[test]
+    fn testInvalidMultiNoOperators() {
+        // a b
+        let expr = OperatorExpr::getFromComponents(getPosIndex(0), vec![
+            getExprComponent(1),
+            getExprComponent(2),
+        ]);
+
+        assert!(expr.is_err());
+    }
+
+    #[test]
+    fn testInvalidNoOperands() {
+        // +
+        let expr = OperatorExpr::getFromComponents(getPosIndex(0), vec![
+            getExprComponent(1),
+        ]);
+
+        assert!(expr.is_err());
+    }
+
+    #[test]
+    fn testInvalidMultiNoOperands() {
+        // + +
+        let expr = OperatorExpr::getFromComponents(getPosIndex(0), vec![
+            getOperatorComponent(1, Operator::Plus),
+            getOperatorComponent(2, Operator::Plus),
+        ]);
+
+        assert!(expr.is_err());
+    }
+
+    #[test]
+    fn testInvalidBinary() {
+        // a +
+        let expr = OperatorExpr::getFromComponents(getPosIndex(0), vec![
+            getExprComponent(1),
+            getOperatorComponent(2, Operator::Plus),
+        ]);
+
+        assert!(expr.is_err());
+    }
+
+    #[test]
+    fn testInvalidUnary() {
+        // a ++ b
+        let expr = OperatorExpr::getFromComponents(getPosIndex(0), vec![
+            getExprComponent(1),
+            getOperatorComponent(2, Operator::Increment),
+            getExprComponent(3),
+        ]);
+
+        assert!(expr.is_err());
     }
 }

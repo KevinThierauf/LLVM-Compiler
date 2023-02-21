@@ -93,6 +93,10 @@ impl ModuleRange {
         return self.startPos.getModule();
     }
 
+    pub fn getSource(&self) -> String {
+        return self.getTokens().iter().map(|v| v.getSourceRange().getSourceInRange()).fold(String::new(), |a, b| a + b);
+    }
+
     pub fn getStartPos(&self) -> ModulePos {
         return self.startPos.to_owned();
     }

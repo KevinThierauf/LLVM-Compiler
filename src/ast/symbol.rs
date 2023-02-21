@@ -7,19 +7,18 @@ use crate::ast::symbol::block::BlockSym;
 use crate::ast::symbol::breaksym::BreakSym;
 use crate::ast::symbol::classdefinition::ClassDefinitionSym;
 use crate::ast::symbol::continuesym::ContinueSym;
-use crate::ast::symbol::expr::ExprType;
+use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::expr::functioncall::FunctionCallExpr;
 use crate::ast::symbol::expr::literal::literalarray::LiteralArray;
 use crate::ast::symbol::expr::literal::literalbool::LiteralBool;
 use crate::ast::symbol::expr::literal::literalchar::LiteralChar;
-use crate::ast::symbol::expr::literal::literalFloat::LiteralFloat;
+use crate::ast::symbol::expr::literal::literalfloat::LiteralFloat;
 use crate::ast::symbol::expr::literal::literalinteger::LiteralInteger;
 use crate::ast::symbol::expr::literal::literalstring::LiteralString;
 use crate::ast::symbol::expr::literal::literaltuple::LiteralTuple;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::expr::literal::literalvoid::LiteralVoid;
 use crate::ast::symbol::expr::operatorexpr::OperatorExpr;
-use crate::ast::symbol::expr::parenthesisexpr::ParenthesisExpr;
 use crate::ast::symbol::expr::variabledeclaration::VariableDeclarationExpr;
 use crate::ast::symbol::expr::variableexpr::VariableExpr;
 use crate::ast::symbol::function::FunctionDefinitionSym;
@@ -67,7 +66,6 @@ pub enum Symbol {
     // expressions
     FunctionCall(FunctionCallExpr),
     Operator(OperatorExpr),
-    Parenthesis(ParenthesisExpr),
     VariableDeclaration(VariableDeclarationExpr),
     Variable(VariableExpr),
     //  literal
@@ -92,7 +90,6 @@ impl Symbol {
             Symbol::ImportSym(symbol) => symbol,
             Symbol::FunctionCall(symbol) => symbol,
             Symbol::Operator(symbol) => symbol,
-            Symbol::Parenthesis(symbol) => symbol,
             Symbol::VariableDeclaration(symbol) => symbol,
             Symbol::Variable(symbol) => symbol,
             Symbol::LiteralArray(symbol) => symbol,
@@ -126,7 +123,6 @@ impl Symbol {
             Symbol::ImportSym(_) => None,
             Symbol::FunctionCall(symbol) => Some(symbol),
             Symbol::Operator(symbol) => Some(symbol),
-            Symbol::Parenthesis(symbol) => Some(symbol),
             Symbol::VariableDeclaration(symbol) => Some(symbol),
             Symbol::Variable(symbol) => Some(symbol),
             Symbol::LiteralArray(symbol) => Some(symbol),
@@ -140,6 +136,34 @@ impl Symbol {
         };
     }
 
+    pub fn toExpression(self) -> Option<Expr> {
+        return match self {
+            Symbol::Block(_) |
+            Symbol::Break(_) |
+            Symbol::ClassDefinition(_) |
+            Symbol::FunctionDefinition(_) |
+            Symbol::IfSym(_) |
+            Symbol::Continue(_) |
+            Symbol::While(_) |
+            Symbol::Loop(_) |
+            Symbol::For(_) |
+            Symbol::Return(_) |
+            Symbol::ImportSym(_) => None,
+            Symbol::FunctionCall(symbol) => Some(Box::new(symbol)),
+            Symbol::Operator(symbol) => Some(Box::new(symbol)),
+            Symbol::VariableDeclaration(symbol) => Some(Box::new(symbol)),
+            Symbol::Variable(symbol) => Some(Box::new(symbol)),
+            Symbol::LiteralArray(symbol) => Some(Box::new(symbol)),
+            Symbol::LiteralBool(symbol) => Some(Box::new(symbol)),
+            Symbol::LiteralChar(symbol) => Some(Box::new(symbol)),
+            Symbol::LiteralFloat(symbol) => Some(Box::new(symbol)),
+            Symbol::LiteralInteger(symbol) => Some(Box::new(symbol)),
+            Symbol::LiteralString(symbol) => Some(Box::new(symbol)),
+            Symbol::LiteralVoid(symbol) => Some(Box::new(symbol)),
+            Symbol::LiteralTuple(symbol) => Some(Box::new(symbol)),
+        };
+    }
+
     pub fn getLiteral(&self) -> Option<&dyn LiteralType> {
         return match self {
             Symbol::Block(_) |
@@ -150,7 +174,6 @@ impl Symbol {
             Symbol::ImportSym(_) |
             Symbol::FunctionCall(_) |
             Symbol::Operator(_) |
-            Symbol::Parenthesis(_) |
             Symbol::VariableDeclaration(_) |
             Symbol::Continue(_) |
             Symbol::While(_) |

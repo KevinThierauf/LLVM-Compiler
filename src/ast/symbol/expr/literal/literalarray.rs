@@ -1,6 +1,6 @@
 use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::expr::literal::LiteralType;
-use crate::ast::symbol::SymbolType;
+use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::typeinfo::Type;
 use crate::module::modulepos::ModuleRange;
 
@@ -10,7 +10,11 @@ pub struct LiteralArray {
     pub exprVec: Vec<Expr>,
 }
 
-impl ExprType for LiteralArray {}
+impl ExprType for LiteralArray {
+    fn toSymbol(self: Box<Self>) -> Symbol {
+        return Symbol::LiteralArray(*self);
+    }
+}
 
 impl SymbolType for LiteralArray {
     fn getRange(&self) -> &ModuleRange {

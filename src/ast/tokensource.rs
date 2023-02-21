@@ -23,7 +23,7 @@ pub enum ASTError {
     // expected token to be exclusive in module, found extraneous symbols
     ExpectedExclusive(ModulePos, Option<TokenTypeDiscriminants>),
     // conflict resolution returned multiple possibilities
-    MultipleConflict(ModulePos, Vec<String>),
+    MultipleConflict(ModulePos, Vec<(String, Vec<String>, String)>),
     // conflict resolution eliminated all possibilities
     EliminatedConflict(ModulePos, Vec<String>),
     // multiple possibilities, none were able to be matched
@@ -42,7 +42,9 @@ impl ASTError {
             } else {
                 format!("expected single token, found extra {:?} token", pos.getToken())
             },
-            ASTError::MultipleConflict(pos, options) => format!("conflict resolution returned multiple potential symbols at {pos:?}: {options:?}"),
+            ASTError::MultipleConflict(pos, options) => format!("conflict resolution returned multiple potential symbols at {pos:?}: {}", options.iter().fold(String::new(), |current, (next, tokens, matchString)|
+                current + "\n\t" + &next.replace('\n', " ").replace('\r', "") + "\n\t" + &tokens.iter().fold(String::new(), |current, next| current + next) + "\n\t" + matchString + "\n"
+            )),
             ASTError::EliminatedConflict(pos, options) => format!("cannot determine appropriate symbol from multiple conflicting matches at {pos:?}; all possibilities eliminated ({options:?})"),
             ASTError::MatchOptionsFailed(pos, options) => format!("all potential matches failed at {pos:?}{}", options.iter().map(|err| format!("\n\t{}", err.getDisplayMessage().replace('\n', "\n\t"))).collect::<Vec<String>>().join("")),
         };

@@ -1,5 +1,5 @@
 use crate::ast::symbol::expr::ExprType;
-use crate::ast::symbol::SymbolType;
+use crate::ast::symbol::{Symbol, SymbolType};
 use crate::module::modulepos::{ModulePos, ModuleRange};
 
 #[derive(Debug)]
@@ -15,4 +15,8 @@ impl SymbolType for VariableDeclarationExpr {
     }
 }
 
-impl ExprType for VariableDeclarationExpr {}
+impl ExprType for VariableDeclarationExpr {
+    fn toSymbol(self: Box<Self>) -> Symbol {
+        return Symbol::VariableDeclaration(*self);
+    }
+}

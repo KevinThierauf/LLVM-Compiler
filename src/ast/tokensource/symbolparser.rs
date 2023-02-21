@@ -251,7 +251,11 @@ pub fn getMatchOneOf<S: 'static + Debug>(options: &[MatchOption<S>]) -> impl Mat
         match options.len() {
             0 => Err(ASTError::MatchOptionsFailed(pos, err)),
             1 => Ok(options.pop().unwrap()),
-            _ => Err(ASTError::MultipleConflict(pos, options.iter().map(|matchValue| format!("{matchValue:?}")).collect()))
+            _ => Err(ASTError::MultipleConflict(pos, options.iter().map(|matchValue|(
+                format!("{}", matchValue.getRange().getSource()),
+                matchValue.getRange().getTokens().iter().map(|token| format!("{:?}", token)).collect(),
+                format!("{:?}", matchValue)
+            )).collect()))
         }
     });
 }

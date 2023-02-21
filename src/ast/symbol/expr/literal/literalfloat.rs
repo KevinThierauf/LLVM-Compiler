@@ -1,6 +1,6 @@
 use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::literal::LiteralType;
-use crate::ast::symbol::SymbolType;
+use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::typeinfo::Type;
 use crate::module::modulepos::ModuleRange;
 
@@ -9,7 +9,11 @@ pub struct LiteralFloat {
     pub range: ModuleRange,
 }
 
-impl ExprType for LiteralFloat {}
+impl ExprType for LiteralFloat {
+    fn toSymbol(self: Box<Self>) -> Symbol {
+        return Symbol::LiteralFloat(*self);
+    }
+}
 
 impl SymbolType for LiteralFloat {
     fn getRange(&self) -> &ModuleRange {
