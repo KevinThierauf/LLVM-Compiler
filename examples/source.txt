@@ -7,11 +7,11 @@ import test as something
 let variable = 6
 let variable2 = 7
 
-int function(int... vars) {
+int function(int var) {
     return 0
 }
 
-print("Hello!")
+print("Hello, World!")
 
 class Something {
     int a

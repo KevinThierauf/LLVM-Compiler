@@ -119,6 +119,7 @@ pub fn getMatchAll<S: Debug>(matchType: impl 'static + Clone + MatchType<Value=S
             let matchValue = matchType.getMatch(pos)?;
             debug_assert_ne!(_debugPos, matchValue.getRange().getEndPos(), "zero length symbol matched");
             pos = matchValue.getRange().getEndPos().to_owned();
+            println!("matched {:?}", matchValue.getValue());
             matchVec.push(matchValue.take().1);
         }
         return Ok(Match::new(pos.getModule().getModuleRange(startIndex..endPos.getTokenIndex()), matchVec));
@@ -130,7 +131,7 @@ pub fn getMatchSymbolsAll() -> impl MatchType<Value=Vec<Symbol>> {
 }
 
 pub fn getMatchSymbol() -> impl MatchType<Value=Symbol> {
-    return getLazyMatch(|| getMatchAnyOf(&[
+    return getMappedMatch(getLazyMatch(|| (getRepeatingMatch(0, getMatchComment()), getMatchAnyOf(&[
         MatchOption::new(getMatchBlockSym(), |_, v| Ok(Symbol::Block(v))),
         MatchOption::new(getMatchBreakSym(), |_, v| Ok(Symbol::Break(v))),
         MatchOption::new(getMatchClassDefinitionSym(), |_, v| Ok(Symbol::ClassDefinition(v))),
@@ -159,7 +160,7 @@ pub fn getMatchSymbol() -> impl MatchType<Value=Symbol> {
             }))?;
             Ok(matchVec.swap_remove(index))
         };
-    }));
+    }))), |_, (_, symbol)| Ok(symbol));
 }
 
 pub fn getMatchExcludingExpr(excludeOperator: bool) -> impl MatchType<Value=Expr> {
@@ -304,6 +305,8 @@ pub fn getMatchClassMember() -> impl MatchType<Value=ClassMember> {
                     })
                 }),
         ),
+        // function definition
+        // returntype name() { expressions }
         MatchOption::new(
             getMatchFunctionDefinitionSym(),
             |_, function| Ok(ClassMember::FunctionDefinition(function)),
@@ -484,11 +487,11 @@ pub fn getMatchFunctionCallExpr() -> impl MatchType<Value=FunctionCallExpr> {
     return getMappedMatch(
         (
             getMatchIdentifier(),
-            getMatchExprCommaList(),
+            getMatchParenthesis(ParenthesisType::Rounded, |module| getMatchExprCommaList().getMatch(module.getModulePos(0))),
         ), |range, (functionName, argVec)| Ok(FunctionCallExpr {
             range,
             functionName,
-            argVec,
+            argVec: argVec.take().1,
         }),
     );
 }
@@ -507,7 +510,7 @@ pub fn getMatchOperatorExpr() -> impl MatchType<Value=OperatorExpr> {
             }),
             |_, component| Ok(component),
         )
-    ])), |range, components: Vec<OperationComponent>| OperatorExpr::getFromComponents(range.getStartPos(), components));
+    ])), |_, components: Vec<OperationComponent>| OperatorExpr::getFromInfix(components));
 }
 
 pub fn getMatchVariableDeclarationExpr() -> impl MatchType<Value=VariableDeclarationExpr> {
@@ -641,5 +644,15 @@ pub fn getMatchLiteralTuple() -> impl MatchType<Value=LiteralTuple> {
                 exprVec,
             };
         })
+    });
+}
+
+pub fn getMatchComment() -> impl MatchType<Value = ()> {
+    return getMatchFrom(format!("Comment"), |pos| {
+        if let TokenType::Comment(_) = pos.getToken().getTokenType() {
+            return Ok(Match::new(pos.getRangeWithLength(1), ()));
+        }
+
+        return Err(ASTError::ExpectedTokenDiscriminant(pos, TokenTypeDiscriminants::Comment));
     });
 }

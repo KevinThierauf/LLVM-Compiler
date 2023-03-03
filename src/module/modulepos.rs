@@ -85,6 +85,7 @@ pub struct ModuleRange {
 impl Debug for ModuleRange {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         return write!(f, "Module({:?}):{} (through {})", self.startPos.getModule().moduleId, self.getStartIndex(), self.getEndIndex());
+        // return write!(f, "Module({:?}):{} (through {}) \"{}\"", self.startPos.getModule().moduleId, self.getStartIndex(), self.getEndIndex(), self.getSource());
     }
 }
 
@@ -130,7 +131,8 @@ impl ModuleRange {
         debug_assert!(index >= self.getStartIndex());
         self.length = index - self.getStartIndex();
     }
-    
+
+    #[must_use]
     pub fn getCombined(&self, range: &ModuleRange) -> ModuleRange {
         assert!(Rc::ptr_eq(self.getModule(), range.getModule()), "cannot combine range across modules");
         let module = range.getModule().to_owned();

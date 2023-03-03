@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::ast::symbol::Symbol;
 use crate::ast::tokensource::tokenparser::parseTokenVec;
-use crate::module::{Module, TokenType, TokenTypeDiscriminants};
+use crate::module::{Module, Operator, TokenType, TokenTypeDiscriminants};
 use crate::module::modulepos::ModulePos;
 
 pub mod conflictresolution;
@@ -16,6 +16,10 @@ pub enum ASTError {
     MatchFailed(ModulePos),
     // failed to match symbol
     ExpectedSymbol(ModulePos),
+    // failed to match expression
+    ExpectedExpression(ModulePos),
+    // invalid number of operands
+    InvalidOperands(ModulePos, Operator),
     // at position expected exact token
     ExpectedToken(ModulePos, TokenType),
     // at position expected token type
@@ -35,6 +39,8 @@ impl ASTError {
         return match self {
             ASTError::MatchFailed(pos) => format!("failed to find match at {pos:?}"),
             ASTError::ExpectedSymbol(pos) => format!("failed to match symbol (at {pos:?})"),
+            ASTError::ExpectedExpression(pos) => format!("failed to match expression (at {pos:?})"),
+            ASTError::InvalidOperands(pos, operator) => format!("incorrect number of operands for {operator:?} (at {pos:?})"),
             ASTError::ExpectedToken(pos, expected) => format!("expected {expected:?} at {pos:?}, found {:?}", pos.getToken()),
             ASTError::ExpectedTokenDiscriminant(pos, expected) => format!("expected {expected:?} at {pos:?}, found {:?}", pos.getToken()),
             ASTError::ExpectedExclusive(pos, expected) => if let Some(expected) = expected {
@@ -54,6 +60,8 @@ impl ASTError {
         return match self {
             ASTError::MatchFailed(pos) |
             ASTError::ExpectedSymbol(pos) |
+            ASTError::ExpectedExpression(pos) => pos,
+            ASTError::InvalidOperands(pos, _) => pos,
             ASTError::ExpectedToken(pos, _) |
             ASTError::ExpectedTokenDiscriminant(pos, _) |
             ASTError::ExpectedExclusive(pos, _) |

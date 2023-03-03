@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
-use std::ops::{Deref, RangeInclusive};
+use std::ops::Deref;
 use std::rc::Rc;
 
 use once_cell::sync::Lazy;
@@ -134,11 +134,11 @@ impl Operator {
         };
     }
 
-    pub fn getOperands(&self) -> RangeInclusive<usize> {
+    pub fn getOperands(&self) -> usize {
         return match self {
-            Operator::Increment | Operator::Decrement | Operator::Not | Operator::Dot | Operator::Ellipsis | Operator::ErrorPropagation | Operator::Cast => 1..=1,
-            Operator::Plus | Operator::Minus | Operator::Mult | Operator::Div | Operator::Mod | Operator::PlusAssign | Operator::MinusAssign | Operator::MultAssign | Operator::DivAssign | Operator::ModAssign | Operator::And | Operator::Or | Operator::Greater | Operator::Less | Operator::GreaterEq | Operator::LessEq | Operator::CompareEq | Operator::CompareNotEq | Operator::AssignEq => 2..=2,
-            Operator::Range => 0..=2,
+            Operator::Increment | Operator::Decrement | Operator::Not | Operator::Ellipsis | Operator::ErrorPropagation | Operator::Cast => 1,
+            Operator::Dot | Operator::Plus | Operator::Minus | Operator::Mult | Operator::Div | Operator::Mod | Operator::PlusAssign | Operator::MinusAssign | Operator::MultAssign | Operator::DivAssign | Operator::ModAssign | Operator::And | Operator::Or | Operator::Greater | Operator::Less | Operator::GreaterEq | Operator::LessEq | Operator::CompareEq | Operator::CompareNotEq | Operator::AssignEq => 2,
+            Operator::Range => 2,
         };
     }
 
