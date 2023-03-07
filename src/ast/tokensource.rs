@@ -11,6 +11,7 @@ pub mod tokenparser;
 pub mod symbolparser;
 mod matchers;
 
+#[derive(Debug)]
 pub enum ASTError {
     // miscellaneous
     MatchFailed(ModulePos),

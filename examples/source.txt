@@ -1,5 +1,5 @@
 structure.function()
-0..1
+// 0..1
 
 import test
 import test as something
@@ -18,9 +18,7 @@ class Something {
     int b
     int c
 
-    void method() {
-        // do nothing
-    }
+
 }
 
 /*
