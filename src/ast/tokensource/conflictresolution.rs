@@ -68,8 +68,8 @@ impl<'a> ConflictResolver<'a> {
 
         let mut preferVec = Vec::new();
         swap(&mut self.preferVec, &mut preferVec);
-        for (preferred, over, longerOnly) in preferVec {
-            if let Some((preferred, preferredIndex)) = self.contains(preferred) {
+        for (preferredDiscriminant, over, longerOnly) in preferVec {
+            if let Some((preferred, _)) = self.contains(preferredDiscriminant) {
                 if longerOnly {
                     if let Some((over, overIndex)) = self.contains(over) {
                         let preferredLength = preferred.getSymbolType().getRange().getLength();
@@ -78,7 +78,7 @@ impl<'a> ConflictResolver<'a> {
                         if overLength <= preferredLength {
                             self.removeIndex(overIndex);
                         } else {
-                            self.removeIndex(preferredIndex);
+                            self.removeSymbol(preferredDiscriminant);
                         }
                     }
                 } else {
@@ -105,6 +105,7 @@ pub fn resolveConflict<'a>(pos: ModulePos, options: impl Iterator<Item=&'a Symbo
     resolver.setPreferred(SymbolDiscriminants::FunctionCall, SymbolDiscriminants::Variable);
     resolver.setPreferred(SymbolDiscriminants::VariableDeclaration, SymbolDiscriminants::Variable);
     resolver.setPreferred(SymbolDiscriminants::FunctionDefinition, SymbolDiscriminants::VariableDeclaration);
+    resolver.setPreferred(SymbolDiscriminants::FunctionDefinition, SymbolDiscriminants::LiteralVoid);
 
     resolver.setPreferredOnlyIfLonger(SymbolDiscriminants::Operator, SymbolDiscriminants::FunctionCall);
     resolver.setPreferredOnlyIfLonger(SymbolDiscriminants::Operator, SymbolDiscriminants::VariableDeclaration);

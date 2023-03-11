@@ -23,8 +23,6 @@ impl OperatorExpr {
     fn getFromPostfix(components: Vec<OperationComponent>) -> Result<Self, ASTError> {
         let mut operandStack = Vec::new();
 
-        println!("{components:?}");
-
         for component in components {
             match component {
                 OperationComponent::Expression(expression) => operandStack.push(expression),
@@ -48,7 +46,6 @@ impl OperatorExpr {
 
         debug_assert_eq!(1, operandStack.len());
         let expr: OperatorExpr = *operandStack.remove(0).downcast().map_err(|expr| ASTError::MatchFailed(expr.getRange().getEndPos().to_owned()))?;
-        println!("OPERATOR EXPR: {:?}", expr.getRange().getSource());
         return Ok(expr);
     }
 

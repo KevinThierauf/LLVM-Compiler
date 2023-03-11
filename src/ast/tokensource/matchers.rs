@@ -24,7 +24,7 @@ use crate::ast::symbol::ifstatement::{ElseSym, IfSym};
 use crate::ast::symbol::import::ImportSym;
 use crate::ast::symbol::looptype::label::Label;
 use crate::ast::symbol::returnsym::ReturnSym;
-use crate::ast::symbol::Symbol;
+use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::tokensource::conflictresolution::resolveConflict;
 use crate::ast::tokensource::symbolparser::{getLazyMatch, getMappedMatch, getMatchAnyOf, getMatchFrom, getMatchOneOf, getRepeatingMatch, Match, MatchOption, MatchType, OptionalMatch};
 use crate::module::{FileRange, Keyword, Module, Operator, ParenthesisType, QuoteType, TokenType, TokenTypeDiscriminants};
@@ -72,6 +72,15 @@ pub fn getMatchVisibility() -> impl MatchType<Value = Visibility> {
         }
 
         return Err(ASTError::MatchFailed(pos));
+    });
+}
+
+pub fn getMatchType() -> impl MatchType<Value = ModulePos> {
+    return getMatchFrom(format!("type"), |pos| {
+        return match pos.getToken().getTokenType() {
+            TokenType::Keyword(Keyword::Void) | TokenType::Identifier => Ok(Match::new(pos.getRangeWithLength(1), pos)),
+            _ => Err(ASTError::ExpectedType(pos)),
+        };
     });
 }
 
@@ -127,16 +136,17 @@ pub fn getMatchAll<S: Debug>(matchType: impl 'static + Clone + MatchType<Value =
         let mut matchVec = Vec::new();
         while pos != endPos {
             let _debugPos = pos.to_owned();
-            let matchValue = match matchType.getMatch(pos) {
-                Ok(matchValue) => matchValue,
-                Err(err) => {
-                    println!("failed to match {:?}", matchType.getDescription());
-                    return Err(err);
-                }
-            };
+            // let matchValue = match matchType.getMatch(pos) {
+            //     Ok(matchValue) => matchValue,
+            //     Err(err) => {
+            //         println!("failed to match {:?}", matchType.getDescription());
+            //         return Err(err);
+            //     }
+            // };
+            let matchValue = matchType.getMatch(pos)?;
             debug_assert_ne!(_debugPos, matchValue.getRange().getEndPos(), "zero length symbol matched");
             pos = matchValue.getRange().getEndPos().to_owned();
-            println!("matched {:?}", matchValue.getValue());
+            // println!("matched {:?}", matchValue.getValue());
             matchVec.push(matchValue.take().1);
         }
         return Ok(Match::new(pos.getModule().getModuleRange(startIndex..endPos.getTokenIndex()), matchVec));
@@ -173,7 +183,9 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
             Err(ASTError::MatchOptionsFailed(pos, errVec))
         } else {
             let index = resolveConflict(pos, matchVec.iter_mut().map(|symbolMatch| {
-                symbolMatch.range = symbolMatch.getValue().getSymbolType().getRange().to_owned();
+                if let Symbol::Operator(expr) = symbolMatch.getValue() {
+                    symbolMatch.range = expr.getRange().to_owned();
+                }
                 symbolMatch.getValue()
             }))?;
             Ok(matchVec.swap_remove(index))
@@ -286,7 +298,7 @@ pub fn getMatchClassMember() -> impl MatchType<Value = ClassMember> {
             (
                 OptionalMatch::new(getMatchVisibility()),
                 OptionalMatch::new(getMatchKeyword(Keyword::Static)),
-                getMatchIdentifier(), // type
+                getMatchType(), // type
                 getMatchIdentifier(), // name
                 OptionalMatch::new((
                     getMatchOperator(Operator::AssignEq),
@@ -346,10 +358,11 @@ pub fn getMatchClassMember() -> impl MatchType<Value = ClassMember> {
 
 pub fn getMatchClassDefinitionSym() -> impl MatchType<Value = ClassDefinitionSym> {
     return getMappedMatch(
+        // visibility class name { ... }
         (
             OptionalMatch::new(getMatchVisibility()),
             getMatchKeyword(Keyword::Class),
-            getMatchIdentifier(),
+            getMatchIdentifier(), // name
             getMatchParenthesis(ParenthesisType::Curly, |module| {
                 return getMatchAll(getMatchClassMember()).getMatch(module.getModulePos(0)).map(|v| v.take().1);
             })
@@ -383,7 +396,7 @@ pub fn getMatchFunctionParameter() -> impl MatchType<Value = FunctionParameter> 
     // type name = expr
     return getMappedMatch(
         (
-            getMatchIdentifier(), // type
+            getMatchType(), // type
             getMatchIdentifier(), // name
             OptionalMatch::new(getMappedMatch(
                 // default value
@@ -409,7 +422,7 @@ pub fn getMatchFunctionDefinitionSym() -> impl MatchType<Value = FunctionDefinit
         (
             OptionalMatch::new(getMatchVisibility()),
             getRepeatingMatch(0, getMatchFunctionAttribute()),
-            getMatchIdentifier(), // return type
+            getMatchType(), // return type
             getMatchIdentifier(), // function name
             getMatchParenthesis(ParenthesisType::Rounded, |module| {
                 fn parseFunctionParameter(module: &Rc<Module>) -> Result<FunctionParameter, ASTError> {
@@ -499,10 +512,10 @@ pub fn getMatchImportSym() -> impl MatchType<Value = ImportSym> {
     return getMappedMatch(
         (
             getMatchKeyword(Keyword::Import),
-            getMatchIdentifier(),
+            getMatchIdentifier(), // import name
             OptionalMatch::new(getMappedMatch(
                 (
-                    getMatchKeyword(Keyword::As), getMatchIdentifier()
+                    getMatchKeyword(Keyword::As), getMatchIdentifier() // alias
                 ), |_, ((), name)| Ok(name))
             )
         ), |range, (_, packageName, localName)| Ok(ImportSym {
@@ -516,7 +529,7 @@ pub fn getMatchFunctionCallExpr() -> impl MatchType<Value = FunctionCallExpr> {
     // functionName(args)
     return getMappedMatch(
         (
-            getMatchIdentifier(),
+            getMatchIdentifier(), // name
             getMatchParenthesis(ParenthesisType::Rounded, |module| getMatchExprCommaList().getMatch(module.getModulePos(0))),
         ), |range, (functionName, argVec)| Ok(FunctionCallExpr {
             range,
@@ -566,7 +579,7 @@ pub fn getMatchVariableDeclarationExpr() -> impl MatchType<Value = VariableDecla
             })), |_, v| Ok(v)),
         MatchOption::new(getMappedMatch(
             (
-                getMatchIdentifier(), // type
+                getMatchType(), // type
                 getMatchIdentifier() // name
             ), |range, (typeName, variableName)| Ok(VariableDeclarationExpr {
                 range,

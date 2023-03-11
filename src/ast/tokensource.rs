@@ -15,6 +15,8 @@ mod matchers;
 pub enum ASTError {
     // miscellaneous
     MatchFailed(ModulePos),
+    // failed to match type
+    ExpectedType(ModulePos),
     // failed to match symbol
     ExpectedSymbol(ModulePos),
     // failed to match expression
@@ -39,6 +41,7 @@ impl ASTError {
     pub fn getErrorMessage(&self) -> String {
         return match self {
             ASTError::MatchFailed(pos) => format!("failed to find match at {pos:?}"),
+            ASTError::ExpectedType(pos) => format!("failed to match type {pos:?}"),
             ASTError::ExpectedSymbol(pos) => format!("failed to match symbol (at {pos:?})"),
             ASTError::ExpectedExpression(pos) => format!("failed to match expression (at {pos:?})"),
             ASTError::InvalidOperands(pos, operator) => format!("incorrect number of operands for {operator:?} (at {pos:?})"),
@@ -60,6 +63,7 @@ impl ASTError {
     pub fn getModulePos(&self) -> &ModulePos {
         return match self {
             ASTError::MatchFailed(pos) |
+            ASTError::ExpectedType(pos) |
             ASTError::ExpectedSymbol(pos) |
             ASTError::ExpectedExpression(pos) => pos,
             ASTError::InvalidOperands(pos, _) => pos,

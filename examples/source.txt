@@ -34,8 +34,12 @@ variable3 ++
 variable3++
 variable3 += 7
 
-//void functionArgs(int a, int b, int c) {
-//}
+void functionArgs(int a, int b, int c) {
+    let variable3 = variable + variable2
+    variable3 ++
+    variable3++
+    variable3 += 7
+}
 
 let f = 12.0
 functionArgs(1, 2, 3)
