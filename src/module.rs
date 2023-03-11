@@ -23,7 +23,8 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn newFrom(tokenVec: Vec<Token>) -> Rc<Self> {
+    pub fn newFrom(mut tokenVec: Vec<Token>) -> Rc<Self> {
+        tokenVec.retain(|token| !matches!(token.getTokenType(), TokenType::Comment(_)));
         return Rc::new(Self {
             moduleId: MODULE_INDEX.fetch_add(1, Relaxed),
             tokenVec,

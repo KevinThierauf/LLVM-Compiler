@@ -1,13 +1,19 @@
+use std::fmt::{Debug, Formatter};
 use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::typeinfo::Type;
 use crate::module::modulepos::ModuleRange;
 
-#[derive(Debug)]
 pub struct LiteralArray {
     pub range: ModuleRange,
     pub exprVec: Vec<Expr>,
+}
+
+impl Debug for LiteralArray {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return write!(f, "{:?}", self.exprVec);
+    }
 }
 
 impl ExprType for LiteralArray {

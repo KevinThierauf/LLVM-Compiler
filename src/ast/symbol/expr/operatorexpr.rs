@@ -7,17 +7,20 @@ use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::module::modulepos::ModuleRange;
 use crate::module::Operator;
 
-#[derive(Debug)]
 pub struct OperatorExpr {
     pub range: ModuleRange,
     pub operands: Box<[Expr]>,
     pub operator: Operator,
 }
 
+impl Debug for OperatorExpr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return write!(f, "{:?} {:?}", self.operands, self.operator);
+    }
+}
+
 impl OperatorExpr {
     fn getFromPostfix(components: Vec<OperationComponent>) -> Result<Self, ASTError> {
-        println!("{components:?}");
-
         let mut operandStack = Vec::new();
 
         for component in components {

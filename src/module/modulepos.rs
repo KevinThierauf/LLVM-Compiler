@@ -39,7 +39,8 @@ impl Ord for ModulePos {
 
 impl Debug for ModulePos {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "Module({:?}):{}", self.module.moduleId, self.getTokenIndex());
+        return write!(f, "\"{}\"", self.getToken().getSourceRange().getSourceInRange());
+        // return write!(f, "Module({:?}):{}", self.module.moduleId, self.getTokenIndex());
     }
 }
 
@@ -84,7 +85,8 @@ pub struct ModuleRange {
 
 impl Debug for ModuleRange {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "Module({:?}):{} (through {})", self.startPos.getModule().moduleId, self.getStartIndex(), self.getEndIndex());
+        return write!(f, "\"{}\"", self.getSource());
+        // return write!(f, "Module({:?}):{} (through {})", self.startPos.getModule().moduleId, self.getStartIndex(), self.getEndIndex());
         // return write!(f, "Module({:?}):{} (through {}) \"{}\"", self.startPos.getModule().moduleId, self.getStartIndex(), self.getEndIndex(), self.getSource());
     }
 }
@@ -95,7 +97,7 @@ impl ModuleRange {
     }
 
     pub fn getSource(&self) -> String {
-        return self.getTokens().iter().map(|v| v.getSourceRange().getSourceInRange()).fold(String::new(), |a, b| a + b);
+        return self.getTokens().iter().map(|v| v.getSourceRange().getSourceInRange()).map(|s| s.to_owned()).reduce(|a, b| a + " " + &b).unwrap_or_default();
     }
 
     pub fn getStartPos(&self) -> ModulePos {

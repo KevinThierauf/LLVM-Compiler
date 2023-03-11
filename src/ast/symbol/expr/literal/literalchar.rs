@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::{Symbol, SymbolType};
@@ -5,10 +6,15 @@ use crate::ast::typeinfo::primitive::character::CHARACTER_TYPE;
 use crate::ast::typeinfo::Type;
 use crate::module::modulepos::ModuleRange;
 
-#[derive(Debug)]
 pub struct LiteralChar {
     pub range: ModuleRange,
-    pub character: u32,
+    pub value: u32,
+}
+
+impl Debug for LiteralChar {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return write!(f, "char({})", self.value);
+    }
 }
 
 impl ExprType for LiteralChar {

@@ -1,8 +1,8 @@
 use std::fmt::Debug;
 use std::rc::Rc;
+use std::str::FromStr;
 
 use crate::ast::ASTError;
-use crate::ast::symbol::Symbol;
 use crate::ast::symbol::block::BlockSym;
 use crate::ast::symbol::breaksym::BreakSym;
 use crate::ast::symbol::classdefinition::{ClassDefinitionSym, ClassFieldDefinition, ClassMember, ClassStaticFieldDefinition};
@@ -24,13 +24,14 @@ use crate::ast::symbol::ifstatement::{ElseSym, IfSym};
 use crate::ast::symbol::import::ImportSym;
 use crate::ast::symbol::looptype::label::Label;
 use crate::ast::symbol::returnsym::ReturnSym;
+use crate::ast::symbol::Symbol;
 use crate::ast::tokensource::conflictresolution::resolveConflict;
 use crate::ast::tokensource::symbolparser::{getLazyMatch, getMappedMatch, getMatchAnyOf, getMatchFrom, getMatchOneOf, getRepeatingMatch, Match, MatchOption, MatchType, OptionalMatch};
 use crate::module::{FileRange, Keyword, Module, Operator, ParenthesisType, QuoteType, TokenType, TokenTypeDiscriminants};
 use crate::module::modulepos::{ModulePos, ModuleRange};
 use crate::module::visibility::Visibility;
 
-pub fn getMatchKeyword(keyword: Keyword) -> impl MatchType<Value=()> {
+pub fn getMatchKeyword(keyword: Keyword) -> impl MatchType<Value = ()> {
     return getMatchFrom(format!("{keyword:?}"), move |pos| {
         if let TokenType::Keyword(value) = pos.getToken().getTokenType() {
             if &keyword == value {
@@ -42,7 +43,7 @@ pub fn getMatchKeyword(keyword: Keyword) -> impl MatchType<Value=()> {
     });
 }
 
-pub fn getMatchOperator(operator: Operator) -> impl MatchType<Value=()> {
+pub fn getMatchOperator(operator: Operator) -> impl MatchType<Value = ()> {
     return getMatchFrom(format!("{operator:?}"), move |pos| {
         if let TokenType::Operator(value) = pos.getToken().getTokenType() {
             if &operator == value {
@@ -54,7 +55,7 @@ pub fn getMatchOperator(operator: Operator) -> impl MatchType<Value=()> {
     });
 }
 
-pub fn getMatchFunctionAttribute() -> impl MatchType<Value=FunctionAttribute> {
+pub fn getMatchFunctionAttribute() -> impl MatchType<Value = FunctionAttribute> {
     return getMatchFrom(format!("FunctionAttribute"), |pos| {
         if let TokenType::Keyword(keyword) = pos.getToken().getTokenType() {
             return Ok(Match::new(pos.getRangeWithLength(1), FunctionAttribute::fromKeyword(*keyword).ok_or(ASTError::ExpectedTokenDiscriminant(pos, TokenTypeDiscriminants::Keyword))?));
@@ -64,7 +65,7 @@ pub fn getMatchFunctionAttribute() -> impl MatchType<Value=FunctionAttribute> {
     });
 }
 
-pub fn getMatchVisibility() -> impl MatchType<Value=Visibility> {
+pub fn getMatchVisibility() -> impl MatchType<Value = Visibility> {
     return getMatchFrom(format!("Visibility"), |pos| {
         if let TokenType::Keyword(keyword) = pos.getToken().getTokenType() {
             return Ok(Match::new(pos.getRangeWithLength(1), Visibility::fromKeyword(*keyword).ok_or(ASTError::MatchFailed(pos))?));
@@ -74,7 +75,7 @@ pub fn getMatchVisibility() -> impl MatchType<Value=Visibility> {
     });
 }
 
-pub fn getMatchIdentifier() -> impl MatchType<Value=ModulePos> {
+pub fn getMatchIdentifier() -> impl MatchType<Value = ModulePos> {
     return getMatchFrom(format!("Identifier"), |pos| {
         if let TokenType::Identifier = pos.getToken().getTokenType() {
             return Ok(Match::new(pos.getRangeWithLength(1), pos));
@@ -84,7 +85,7 @@ pub fn getMatchIdentifier() -> impl MatchType<Value=ModulePos> {
     });
 }
 
-pub fn getMatchParenthesis<T: Debug>(parenthesis: ParenthesisType, function: impl 'static + Clone + Fn(&Rc<Module>) -> Result<T, ASTError>) -> impl MatchType<Value=T> {
+pub fn getMatchParenthesis<T: Debug>(parenthesis: ParenthesisType, function: impl 'static + Clone + Fn(&Rc<Module>) -> Result<T, ASTError>) -> impl MatchType<Value = T> {
     return getMatchFrom(format!("Parenthesis"), move |pos| {
         if let TokenType::Parenthesis(parenthesisType, module) = pos.getToken().getTokenType() {
             if &parenthesis == parenthesisType {
@@ -96,7 +97,7 @@ pub fn getMatchParenthesis<T: Debug>(parenthesis: ParenthesisType, function: imp
     });
 }
 
-pub fn getMatchQuote<T: Debug>(quote: QuoteType, function: impl 'static + Clone + Fn(ModuleRange, &FileRange) -> Result<T, ASTError>) -> impl MatchType<Value=T> {
+pub fn getMatchQuote<T: Debug>(quote: QuoteType, function: impl 'static + Clone + Fn(ModuleRange, &FileRange) -> Result<T, ASTError>) -> impl MatchType<Value = T> {
     return getMatchFrom(format!("{quote:?}Quote"), move |pos| {
         if let TokenType::String(quoteType, fileRange) = pos.getToken().getTokenType() {
             if &quote == quoteType {
@@ -109,14 +110,20 @@ pub fn getMatchQuote<T: Debug>(quote: QuoteType, function: impl 'static + Clone 
     });
 }
 
-pub fn getMatchAll<S: Debug>(matchType: impl 'static + Clone + MatchType<Value=S>) -> impl MatchType<Value=Vec<S>> {
+pub fn getMatchAll<S: Debug>(matchType: impl 'static + Clone + MatchType<Value = S>) -> impl MatchType<Value = Vec<S>> {
     return getMatchFrom(format!("MatchAnyFullRange({matchType:?})"), move |mut pos| {
         let startIndex = pos.getTokenIndex();
         let endPos = pos.getModule().getModulePos(pos.getModule().getTokenVector().len());
         let mut matchVec = Vec::new();
         while pos != endPos {
             let _debugPos = pos.to_owned();
-            let matchValue = matchType.getMatch(pos)?;
+            let matchValue = match matchType.getMatch(pos) {
+                Ok(matchValue) => matchValue,
+                Err(err) => {
+                    println!("failed to match {:?}", matchType.getDescription());
+                    return Err(err);
+                }
+            };
             debug_assert_ne!(_debugPos, matchValue.getRange().getEndPos(), "zero length symbol matched");
             pos = matchValue.getRange().getEndPos().to_owned();
             println!("matched {:?}", matchValue.getValue());
@@ -126,12 +133,12 @@ pub fn getMatchAll<S: Debug>(matchType: impl 'static + Clone + MatchType<Value=S
     });
 }
 
-pub fn getMatchSymbolsAll() -> impl MatchType<Value=Vec<Symbol>> {
+pub fn getMatchSymbolsAll() -> impl MatchType<Value = Vec<Symbol>> {
     return getMatchAll(getMatchSymbol());
 }
 
-pub fn getMatchSymbol() -> impl MatchType<Value=Symbol> {
-    return getMappedMatch(getLazyMatch(|| (getRepeatingMatch(0, getMatchComment()), getMatchAnyOf(&[
+pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
+    return getMappedMatch(getLazyMatch(|| getMatchAnyOf(&[
         MatchOption::new(getMatchBlockSym(), |_, v| Ok(Symbol::Block(v))),
         MatchOption::new(getMatchBreakSym(), |_, v| Ok(Symbol::Break(v))),
         MatchOption::new(getMatchClassDefinitionSym(), |_, v| Ok(Symbol::ClassDefinition(v))),
@@ -160,10 +167,10 @@ pub fn getMatchSymbol() -> impl MatchType<Value=Symbol> {
             }))?;
             Ok(matchVec.swap_remove(index))
         };
-    }))), |_, (_, symbol)| Ok(symbol));
+    })), |_, symbol| Ok(symbol));
 }
 
-pub fn getMatchExcludingExpr(excludeOperator: bool) -> impl MatchType<Value=Expr> {
+pub fn getMatchExcludingExpr(excludeOperator: bool) -> impl MatchType<Value = Expr> {
     return getMatchAnyOf(&[
         MatchOption::new(getMatchFunctionCallExpr(), |_, v| Ok(Box::new(v) as Expr)),
         if !excludeOperator {
@@ -196,17 +203,18 @@ pub fn getMatchExcludingExpr(excludeOperator: bool) -> impl MatchType<Value=Expr
     });
 }
 
-pub fn getMatchExpr() -> impl MatchType<Value=Expr> {
+pub fn getMatchExpr() -> impl MatchType<Value = Expr> {
     return getMatchExcludingExpr(false);
 }
 
-pub fn getMatchExprCommaList() -> impl MatchType<Value=Vec<Expr>> {
+pub fn getMatchExprCommaList() -> impl MatchType<Value = Vec<Expr>> {
     return getMatchFrom(format!("CommaList(Expr)"), move |pos| {
         let token = pos.getToken();
+        let matchExpr = getMatchExpr();
         return if let TokenType::CommaList(moduleVec) = token.getTokenType() {
             let mut exprVec = Vec::new();
             for module in moduleVec {
-                let matchValue = getMatchExpr().getMatch(module.getModulePos(0))?;
+                let matchValue = matchExpr.getMatch(module.getModulePos(0))?;
                 if matchValue.getRange().getEndIndex() != module.getTokenVector().len() {
                     return Err(ASTError::ExpectedExclusive(matchValue.getRange().getEndPos(), None));
                 }
@@ -214,12 +222,19 @@ pub fn getMatchExprCommaList() -> impl MatchType<Value=Vec<Expr>> {
             }
             Ok(Match::new(pos.getRangeWithLength(1), exprVec))
         } else {
-            Ok(Match::new(pos.getRangeWithLength(pos.getModule().getTokenVector().len() - pos.getTokenIndex()), Vec::new()))
+            if pos.getModule().getTokenVector().is_empty() {
+                Ok(Match::new(pos.getRangeWithLength(pos.getModule().getTokenVector().len() - pos.getTokenIndex()), Vec::new()))
+            } else {
+                matchExpr.getMatch(pos.getModule().getModulePos(0)).map(|expr| {
+                    let (range, value) = expr.take();
+                    Match::new(range, vec![value])
+                })
+            }
         };
     });
 }
 
-pub fn getMatchBlockSym() -> impl MatchType<Value=BlockSym> {
+pub fn getMatchBlockSym() -> impl MatchType<Value = BlockSym> {
     // { expressions }
     return getMatchParenthesis(ParenthesisType::Curly, |module| {
         getMatchSymbolsAll().getMatch(module.getModulePos(0)).map(|matchValue| {
@@ -232,7 +247,7 @@ pub fn getMatchBlockSym() -> impl MatchType<Value=BlockSym> {
     });
 }
 
-pub fn getMatchBreakSym() -> impl MatchType<Value=BreakSym> {
+pub fn getMatchBreakSym() -> impl MatchType<Value = BreakSym> {
     // break
     // break label
     return getMappedMatch(
@@ -249,7 +264,7 @@ pub fn getMatchBreakSym() -> impl MatchType<Value=BreakSym> {
     );
 }
 
-pub fn getMatchClassMember() -> impl MatchType<Value=ClassMember> {
+pub fn getMatchClassMember() -> impl MatchType<Value = ClassMember> {
     return getMatchOneOf(&[
         // type name = value
         MatchOption::new(
@@ -314,7 +329,7 @@ pub fn getMatchClassMember() -> impl MatchType<Value=ClassMember> {
     ]);
 }
 
-pub fn getMatchClassDefinitionSym() -> impl MatchType<Value=ClassDefinitionSym> {
+pub fn getMatchClassDefinitionSym() -> impl MatchType<Value = ClassDefinitionSym> {
     return getMappedMatch(
         (
             OptionalMatch::new(getMatchVisibility()),
@@ -348,7 +363,7 @@ pub fn getMatchClassDefinitionSym() -> impl MatchType<Value=ClassDefinitionSym> 
         });
 }
 
-pub fn getMatchFunctionParameter() -> impl MatchType<Value=FunctionParameter> {
+pub fn getMatchFunctionParameter() -> impl MatchType<Value = FunctionParameter> {
     // type name
     // type name = expr
     return getMappedMatch(
@@ -373,7 +388,7 @@ pub fn getMatchFunctionParameter() -> impl MatchType<Value=FunctionParameter> {
         });
 }
 
-pub fn getMatchFunctionDefinitionSym() -> impl MatchType<Value=FunctionDefinitionSym> {
+pub fn getMatchFunctionDefinitionSym() -> impl MatchType<Value = FunctionDefinitionSym> {
     // visibility returnType functionName(args) { expressions}
     return getMappedMatch(
         (
@@ -420,7 +435,7 @@ pub fn getMatchFunctionDefinitionSym() -> impl MatchType<Value=FunctionDefinitio
         });
 }
 
-pub fn getMatchIfSym() -> impl MatchType<Value=IfSym> {
+pub fn getMatchIfSym() -> impl MatchType<Value = IfSym> {
     // if condition { symbols }
     // if condition { symbols } else { symbols }
     return getMappedMatch(
@@ -446,7 +461,7 @@ pub fn getMatchIfSym() -> impl MatchType<Value=IfSym> {
         });
 }
 
-pub fn getMatchReturnSym() -> impl MatchType<Value=ReturnSym> {
+pub fn getMatchReturnSym() -> impl MatchType<Value = ReturnSym> {
     // return
     // return value
     return getMappedMatch(
@@ -463,7 +478,7 @@ pub fn getMatchReturnSym() -> impl MatchType<Value=ReturnSym> {
         });
 }
 
-pub fn getMatchImportSym() -> impl MatchType<Value=ImportSym> {
+pub fn getMatchImportSym() -> impl MatchType<Value = ImportSym> {
     // import name
     // import name as name
     return getMappedMatch(
@@ -482,7 +497,7 @@ pub fn getMatchImportSym() -> impl MatchType<Value=ImportSym> {
         }));
 }
 
-pub fn getMatchFunctionCallExpr() -> impl MatchType<Value=FunctionCallExpr> {
+pub fn getMatchFunctionCallExpr() -> impl MatchType<Value = FunctionCallExpr> {
     // functionName(args)
     return getMappedMatch(
         (
@@ -496,7 +511,7 @@ pub fn getMatchFunctionCallExpr() -> impl MatchType<Value=FunctionCallExpr> {
     );
 }
 
-pub fn getMatchOperatorExpr() -> impl MatchType<Value=OperatorExpr> {
+pub fn getMatchOperatorExpr() -> impl MatchType<Value = OperatorExpr> {
     return getMappedMatch(getRepeatingMatch(1, getMatchOneOf(&[
         MatchOption::new(getMatchExcludingExpr(true), |_, expression|
             Ok(OperationComponent::Expression(expression))),
@@ -513,7 +528,7 @@ pub fn getMatchOperatorExpr() -> impl MatchType<Value=OperatorExpr> {
     ])), |_, components: Vec<OperationComponent>| OperatorExpr::getFromInfix(components));
 }
 
-pub fn getMatchVariableDeclarationExpr() -> impl MatchType<Value=VariableDeclarationExpr> {
+pub fn getMatchVariableDeclarationExpr() -> impl MatchType<Value = VariableDeclarationExpr> {
     // let name
     // type name
     return getMatchOneOf(&[
@@ -538,14 +553,14 @@ pub fn getMatchVariableDeclarationExpr() -> impl MatchType<Value=VariableDeclara
     ]);
 }
 
-pub fn getMatchVariableExpr() -> impl MatchType<Value=VariableExpr> {
+pub fn getMatchVariableExpr() -> impl MatchType<Value = VariableExpr> {
     // name
     return getMappedMatch(getMatchIdentifier(), |range, _| Ok(VariableExpr {
         range,
     }));
 }
 
-pub fn getMatchLiteralArray() -> impl MatchType<Value=LiteralArray> {
+pub fn getMatchLiteralArray() -> impl MatchType<Value = LiteralArray> {
     // [a, b, c]
     return getMatchParenthesis(ParenthesisType::Square, |parenthesisModule| {
         getMatchExprCommaList().getMatch(parenthesisModule.getModulePos(0)).map(|matchValue| {
@@ -558,7 +573,7 @@ pub fn getMatchLiteralArray() -> impl MatchType<Value=LiteralArray> {
     });
 }
 
-pub fn getMatchLiteralBool() -> impl MatchType<Value=LiteralBool> {
+pub fn getMatchLiteralBool() -> impl MatchType<Value = LiteralBool> {
     // true
     // false
     return getMatchOneOf(&[
@@ -573,11 +588,11 @@ pub fn getMatchLiteralBool() -> impl MatchType<Value=LiteralBool> {
     ]);
 }
 
-pub fn getMatchLiteralChar() -> impl MatchType<Value=LiteralChar> {
+pub fn getMatchLiteralChar() -> impl MatchType<Value = LiteralChar> {
     // 'a'
     return getMatchQuote(QuoteType::Single, |range, fileRange| Ok(LiteralChar {
         range,
-        character: {
+        value: {
             let source = fileRange.getSourceInRange();
             debug_assert_eq!(source.len(), 1);
             source.chars().next().unwrap() as u32
@@ -589,14 +604,16 @@ fn isFloat(number: &FileRange) -> bool {
     return number.getSourceInRange().contains('.');
 }
 
-pub fn getMatchLiteralFloat() -> impl MatchType<Value=LiteralFloat> {
+pub fn getMatchLiteralFloat() -> impl MatchType<Value = LiteralFloat> {
     // 0.0
     return getMatchFrom(format!("LiteralFloat"), |pos| {
         if let TokenType::Number = pos.getToken().getTokenType() {
             if isFloat(pos.getToken().getSourceRange()) {
                 let range = pos.getRangeWithLength(1);
+                let source = pos.getToken().getSourceRange().getSourceInRange();
                 return Ok(Match::new(range.to_owned(), LiteralFloat {
                     range,
+                    value: f64::from_str(source).expect(&format!("failed to parse float \"{source}\"")),
                 }));
             }
         }
@@ -604,14 +621,16 @@ pub fn getMatchLiteralFloat() -> impl MatchType<Value=LiteralFloat> {
     });
 }
 
-pub fn getMatchLiteralInteger() -> impl MatchType<Value=LiteralInteger> {
+pub fn getMatchLiteralInteger() -> impl MatchType<Value = LiteralInteger> {
     // 0
     return getMatchFrom(format!("LiteralInteger"), |pos| {
         if let TokenType::Number = pos.getToken().getTokenType() {
             if !isFloat(pos.getToken().getSourceRange()) {
                 let range = pos.getRangeWithLength(1);
+                let source = pos.getToken().getSourceRange().getSourceInRange();
                 return Ok(Match::new(range.to_owned(), LiteralInteger {
                     range,
+                    value: u64::from_str(source).expect(&format!("failed to parse integer \"{source}\"")),
                 }));
             }
         }
@@ -619,7 +638,7 @@ pub fn getMatchLiteralInteger() -> impl MatchType<Value=LiteralInteger> {
     });
 }
 
-pub fn getMatchLiteralString() -> impl MatchType<Value=LiteralString> {
+pub fn getMatchLiteralString() -> impl MatchType<Value = LiteralString> {
     // "abc"
     return getMatchQuote(QuoteType::Double, |range, fileRange| Ok(LiteralString {
         range,
@@ -627,14 +646,14 @@ pub fn getMatchLiteralString() -> impl MatchType<Value=LiteralString> {
     }));
 }
 
-pub fn getMatchLiteralVoid() -> impl MatchType<Value=LiteralVoid> {
+pub fn getMatchLiteralVoid() -> impl MatchType<Value = LiteralVoid> {
     // void
     return getMappedMatch(getMatchKeyword(Keyword::Void), |range, _| Ok(LiteralVoid {
         range,
     }));
 }
 
-pub fn getMatchLiteralTuple() -> impl MatchType<Value=LiteralTuple> {
+pub fn getMatchLiteralTuple() -> impl MatchType<Value = LiteralTuple> {
     // (a, b, c)
     return getMatchParenthesis(ParenthesisType::Rounded, |module| {
         getMatchExprCommaList().getMatch(module.getModulePos(0)).map(|matchValue| {
@@ -644,15 +663,5 @@ pub fn getMatchLiteralTuple() -> impl MatchType<Value=LiteralTuple> {
                 exprVec,
             };
         })
-    });
-}
-
-pub fn getMatchComment() -> impl MatchType<Value = ()> {
-    return getMatchFrom(format!("Comment"), |pos| {
-        if let TokenType::Comment(_) = pos.getToken().getTokenType() {
-            return Ok(Match::new(pos.getRangeWithLength(1), ()));
-        }
-
-        return Err(ASTError::ExpectedTokenDiscriminant(pos, TokenTypeDiscriminants::Comment));
     });
 }

@@ -1,12 +1,19 @@
+use std::fmt::{Debug, Formatter};
 use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::typeinfo::Type;
 use crate::module::modulepos::ModuleRange;
 
-#[derive(Debug)]
 pub struct LiteralInteger {
     pub range: ModuleRange,
+    pub value: u64,
+}
+
+impl Debug for LiteralInteger {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return write!(f, "int({})", self.value);
+    }
 }
 
 impl ExprType for LiteralInteger {

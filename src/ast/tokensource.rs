@@ -32,7 +32,7 @@ pub enum ASTError {
     // conflict resolution eliminated all possibilities
     EliminatedConflict(ModulePos, Vec<String>),
     // multiple possibilities, none were able to be matched
-    MatchOptionsFailed(ModulePos, Vec<ASTError>),
+    MatchOptionsFailed(ModulePos, Vec<(String, ASTError)>),
 }
 
 impl ASTError {
@@ -53,7 +53,7 @@ impl ASTError {
                 current + "\n\t" + &next.replace('\n', " ").replace('\r', "") + "\n\t" + &tokens.iter().fold(String::new(), |current, next| current + next) + "\n\t" + matchString + "\n"
             )),
             ASTError::EliminatedConflict(pos, options) => format!("cannot determine appropriate symbol from multiple conflicting matches at {pos:?}; all possibilities eliminated ({options:?})"),
-            ASTError::MatchOptionsFailed(pos, options) => format!("all potential matches failed at {pos:?}{}", options.iter().map(|err| format!("\n\t{}", err.getDisplayMessage().replace('\n', "\n\t"))).collect::<Vec<String>>().join("")),
+            ASTError::MatchOptionsFailed(pos, options) => format!("all potential matches failed at {pos:?}{}", options.iter().map(|(description, err)| format!("\n\t{description}: {}", err.getDisplayMessage().replace('\n', "\n\t"))).collect::<Vec<String>>().join("")),
         };
     }
 

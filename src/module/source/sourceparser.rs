@@ -381,7 +381,7 @@ impl SourceParser {
     }
 
     fn addToken(&mut self, tokenType: TokenType) {
-        self.addTokenRange(tokenType, self.getFileRange(self.lastTokenStart..self.nextCharacterIndex));
+        self.addTokenRange(tokenType, self.getFileRange(self.basicTokenStart..self.nextCharacterIndex));
     }
 
     fn addBasicTokenExcludeLastChar(&mut self, skipCurrent: bool) -> Result<(), ParseError> {
@@ -484,7 +484,7 @@ impl SourceParser {
                     let number = isInnerNumberChar(character) || outerNumber;
                     let outerIdentifier = isOuterIdentifierCharacter(character);
 
-                    if (operator && !self.basicTokenOption.isOptionSet(Operator)) || (!operator && self.basicTokenOption.isOptionSet(Operator) && self.lastTokenStart < lastCharacterIndex) {
+                    if (operator && self.basicTokenOption.isOptionSet(Word)) || (!operator && self.basicTokenOption.isOptionSet(Operator) && self.lastTokenStart < lastCharacterIndex) {
                         self.addBasicTokenExcludeLastChar(false)?;
                     }
 

@@ -7,7 +7,7 @@ import test as something
 let variable = 6
 let variable2 = 7
 
-int function(int var) {
+void function(int var) {
     return 0
 }
 
@@ -17,7 +17,6 @@ class Something {
     int a
     int b
     int c
-
 
 }
 
@@ -36,6 +35,5 @@ void methodArgs(int a, int b, int c) {
 }
 
 let f = 12.0
-let v = 0x12
 methodArgs(1, 2, 3)
 methodArgs(1,2,3)

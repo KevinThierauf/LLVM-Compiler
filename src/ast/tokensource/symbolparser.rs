@@ -74,7 +74,7 @@ pub fn getMatchFrom<S: Debug>(description: String, function: impl 'static + Clon
 
     impl<F: 'static + Clone + Fn(ModulePos) -> Result<Match<S>, ASTError>, S> Debug for MatchImpl<F, S> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            return writeln!(f, "getMatchFrom()");
+            return write!(f, "getMatchFrom()");
         }
     }
 
@@ -113,7 +113,7 @@ pub fn getMappedMatch<S: Debug, T: MatchType>(matcher: T, function: impl 'static
 
     impl<S, T: MatchType, F: 'static + Clone + Fn(ModuleRange, T::Value) -> Result<S, ASTError>> Debug for MatchNested<S, T, F> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            return writeln!(f, "getMappedMatch({:?})", self.matcher);
+            return write!(f, "getMappedMatch({:?})", self.matcher);
         }
     }
 
@@ -205,16 +205,16 @@ impl<S: 'static + Debug> MatchOption<S> {
     }
 }
 
-pub fn getMatchAnyOf<S: 'static + Debug>(options: &[MatchOption<S>], conflictResolver: impl 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<ASTError>) -> Result<Match<S>, ASTError>) -> impl MatchType<Value = S> {
-    struct MatchOptionType<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<ASTError>) -> Result<Match<S>, ASTError>>(Vec<MatchOption<S>>, R);
+pub fn getMatchAnyOf<S: 'static + Debug>(options: &[MatchOption<S>], conflictResolver: impl 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<(String, ASTError)>) -> Result<Match<S>, ASTError>) -> impl MatchType<Value = S> {
+    struct MatchOptionType<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<(String, ASTError)>) -> Result<Match<S>, ASTError>>(Vec<MatchOption<S>>, R);
 
-    impl<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<ASTError>) -> Result<Match<S>, ASTError>> Debug for MatchOptionType<S, R> {
+    impl<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<(String, ASTError)>) -> Result<Match<S>, ASTError>> Debug for MatchOptionType<S, R> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            return writeln!(f, "getMatchAnyOf()");
+            return write!(f, "getMatchAnyOf()");
         }
     }
 
-    impl<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<ASTError>) -> Result<Match<S>, ASTError>> Clone for MatchOptionType<S, R> {
+    impl<S: 'static, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<(String, ASTError)>) -> Result<Match<S>, ASTError>> Clone for MatchOptionType<S, R> {
         fn clone(&self) -> Self {
             return Self {
                 0: self.0.to_owned(),
@@ -222,7 +222,7 @@ pub fn getMatchAnyOf<S: 'static + Debug>(options: &[MatchOption<S>], conflictRes
             };
         }
     }
-    impl<S: 'static + Debug, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<ASTError>) -> Result<Match<S>, ASTError>> MatchType for MatchOptionType<S, R> {
+    impl<S: 'static + Debug, R: 'static + Clone + Fn(ModulePos, Vec<Match<S>>, Vec<(String, ASTError)>) -> Result<Match<S>, ASTError>> MatchType for MatchOptionType<S, R> {
         type Value = S;
 
         fn getDescription(&self) -> String {
@@ -235,10 +235,10 @@ pub fn getMatchAnyOf<S: 'static + Debug>(options: &[MatchOption<S>], conflictRes
             for matchOption in &self.0 {
                 match matchOption.matchOption.getMatchValue(startPos.to_owned()) {
                     Ok(matched) => matchVec.push(matched),
-                    Err(err) => errVec.push(err),
+                    Err(err) => errVec.push((matchOption.matchOption.getDescription(), err)),
                 }
             }
-            errVec.retain(|err| err.getModulePos() != &startPos);
+            errVec.retain(|(_, err)| err.getModulePos() != &startPos);
             return (self.1)(startPos, matchVec, errVec);
         }
     }
@@ -285,7 +285,7 @@ pub fn getLazyMatch<S: Debug, M: MatchType<Value = S>>(f: impl 'static + Clone +
 
     impl<S, M: MatchType<Value = S>, F: 'static + Clone + Fn() -> M> Debug for MatchLazy<S, M, F> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            return writeln!(f, "getLazyMatch()");
+            return write!(f, "getLazyMatch()");
         }
     }
 
@@ -302,7 +302,10 @@ pub fn getLazyMatch<S: Debug, M: MatchType<Value = S>>(f: impl 'static + Clone +
         type Value = S;
 
         fn getDescription(&self) -> String {
-            return self.borrow_mut().getInitialized().getDescription();
+            // ideally LazyMatch contents would be provided once in getDescription stack, but since there currently is no state passed through getDescription,
+            //  this is not yet possible.
+            // self.borrow_mut().getInitialized().getDescription()
+            return "LazyMatch(...)".to_owned();
         }
 
         fn getMatch(&self, startPos: ModulePos) -> Result<Match<Self::Value>, ASTError> {
