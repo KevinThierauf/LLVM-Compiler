@@ -13,7 +13,7 @@ pub trait MatchType: Clone + Debug {
 
 #[derive(Debug)]
 pub struct Match<T> {
-    range: ModuleRange,
+    pub(in super) range: ModuleRange,
     value: T,
 }
 

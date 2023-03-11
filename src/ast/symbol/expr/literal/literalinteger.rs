@@ -7,7 +7,7 @@ use crate::module::modulepos::ModuleRange;
 
 pub struct LiteralInteger {
     pub range: ModuleRange,
-    pub value: u64,
+    pub value: i64,
 }
 
 impl Debug for LiteralInteger {

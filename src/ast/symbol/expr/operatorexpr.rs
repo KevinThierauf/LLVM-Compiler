@@ -23,6 +23,8 @@ impl OperatorExpr {
     fn getFromPostfix(components: Vec<OperationComponent>) -> Result<Self, ASTError> {
         let mut operandStack = Vec::new();
 
+        println!("{components:?}");
+
         for component in components {
             match component {
                 OperationComponent::Expression(expression) => operandStack.push(expression),
@@ -45,7 +47,9 @@ impl OperatorExpr {
         }
 
         debug_assert_eq!(1, operandStack.len());
-        return Ok(*operandStack.remove(0).downcast().map_err(|expr| ASTError::MatchFailed(expr.getRange().getEndPos().to_owned()))?);
+        let expr: OperatorExpr = *operandStack.remove(0).downcast().map_err(|expr| ASTError::MatchFailed(expr.getRange().getEndPos().to_owned()))?;
+        println!("OPERATOR EXPR: {:?}", expr.getRange().getSource());
+        return Ok(expr);
     }
 
     fn getValidComponents(mut components: Vec<OperationComponent>) -> Result<Vec<OperationComponent>, ASTError> {
@@ -188,10 +192,10 @@ pub enum OperationComponent {
 
 impl Debug for OperationComponent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "{}", match self {
-            OperationComponent::Operator(_, operator) => operator.getCharacters().to_owned(),
-            OperationComponent::Expression(expr) => expr.getRange().getStartIndex().to_string(),
-        });
+        return match self {
+            OperationComponent::Operator(_, operator) => write!(f, "{}", operator.getCharacters().to_owned()),
+            OperationComponent::Expression(expr) => write!(f, "{:?}", expr),
+        };
     }
 }
 
@@ -227,6 +231,7 @@ mod test {
 
     fn getExpr(index: usize) -> Expr {
         return Box::new(LiteralInteger {
+            value: index as i64,
             range: getPosIndex(index).getRangeWithLength(0),
         });
     }

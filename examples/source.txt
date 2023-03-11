@@ -7,7 +7,7 @@ import test as something
 let variable = 6
 let variable2 = 7
 
-void function(int var) {
+int function() {
     return 0
 }
 
@@ -18,6 +18,9 @@ class Something {
     int b
     int c
 
+//    void method() {
+        // do nothing
+//    }
 }
 
 /*
@@ -31,9 +34,9 @@ variable3 ++
 variable3++
 variable3 += 7
 
-void methodArgs(int a, int b, int c) {
-}
+//void functionArgs(int a, int b, int c) {
+//}
 
 let f = 12.0
-methodArgs(1, 2, 3)
-methodArgs(1,2,3)
+functionArgs(1, 2, 3)
+functionArgs(1,2,3)
