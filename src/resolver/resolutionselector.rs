@@ -1,8 +1,8 @@
-use crate::ast::typeinfo::Type;
 use crate::module::modulepos::ModuleRange;
 use crate::resolver::resolutionselector::resolutionconstraint::{ResolutionConstraint, ResolutionConstraintType};
 use crate::resolver::resolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
 use crate::resolver::resolutionselector::resolutionerror::ResolutionError;
+use crate::resolver::typeinfo::Type;
 
 pub mod resolutionconstraint;
 pub mod resolutionconstraintsolver;

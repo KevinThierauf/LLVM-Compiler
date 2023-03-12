@@ -3,6 +3,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use crate::ast::ASTError;
+use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::symbol::block::BlockSym;
 use crate::ast::symbol::breaksym::BreakSym;
 use crate::ast::symbol::classdefinition::{ClassDefinitionSym, ClassFieldDefinition, ClassMember, ClassStaticFieldDefinition};
@@ -24,7 +25,6 @@ use crate::ast::symbol::ifstatement::{ElseSym, IfSym};
 use crate::ast::symbol::import::ImportSym;
 use crate::ast::symbol::looptype::label::Label;
 use crate::ast::symbol::returnsym::ReturnSym;
-use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::tokensource::conflictresolution::resolveConflict;
 use crate::ast::tokensource::symbolparser::{getLazyMatch, getMappedMatch, getMatchAnyOf, getMatchFrom, getMatchOneOf, getRepeatingMatch, Match, MatchOption, MatchType, OptionalMatch};
 use crate::module::{FileRange, Keyword, Module, Operator, ParenthesisType, QuoteType, TokenType, TokenTypeDiscriminants};

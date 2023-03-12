@@ -5,9 +5,9 @@ use std::hash::{Hash, Hasher};
 use hashbrown::HashSet;
 use priority_queue::PriorityQueue;
 
-use crate::ast::typeinfo::Type;
 use crate::module::modulepos::ModuleRange;
 use crate::resolver::resolutionselector::ResolutionError;
+use crate::resolver::typeinfo::Type;
 
 #[derive(Debug)]
 struct ConstraintInfo<T> {
@@ -275,13 +275,13 @@ impl ResolutionConstraintSolver {
 
 #[cfg(test)]
 mod test {
-    use crate::ast::typeinfo::primitive::boolean::BOOLEAN_TYPE;
-    use crate::ast::typeinfo::primitive::character::CHARACTER_TYPE;
-    use crate::ast::typeinfo::Type;
     use crate::module::Module;
     use crate::module::modulepos::ModuleRange;
     use crate::resolver::resolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
     use crate::resolver::resolutionselector::resolutionerror::ResolutionError;
+    use crate::resolver::typeinfo::primitive::boolean::BOOLEAN_TYPE;
+    use crate::resolver::typeinfo::primitive::character::CHARACTER_TYPE;
+    use crate::resolver::typeinfo::Type;
 
     thread_local! {
         static RANGE: ModuleRange = Module::newFrom(Vec::new()).getModuleRange(0..0);

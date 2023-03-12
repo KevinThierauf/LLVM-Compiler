@@ -7,7 +7,6 @@ use crate::module::Module;
 
 mod tokensource;
 pub mod symbol;
-pub mod typeinfo;
 
 #[derive(Debug)]
 pub struct AbstractSyntaxTree {
@@ -23,5 +22,9 @@ impl AbstractSyntaxTree {
 
     pub fn new(module: Rc<Module>) -> Result<Rc<Self>, ASTError> {
         return Ok(Self::newFrom(parseModule(module)?));
+    }
+
+    pub fn take(self) -> Vec<Symbol> {
+        return self.symbolVec;
     }
 }

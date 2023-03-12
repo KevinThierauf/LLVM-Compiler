@@ -3,22 +3,22 @@ use std::sync::Arc;
 
 use once_cell::sync::Lazy;
 
-use crate::ast::typeinfo::{Type, TypeInfo};
+use crate::resolver::typeinfo::{Type, TypeInfo};
 
-pub static BOOLEAN_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Boolean { phantom: PhantomData })));
+pub static CHARACTER_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Character { phantom: PhantomData })));
 
-pub struct Boolean {
+pub struct Character {
     // prevent construction
     phantom: PhantomData<()>,
 }
 
-impl TypeInfo for Boolean {
+impl TypeInfo for Character {
     fn getTypeName(&self) -> &str {
-        return "bool";
+        return "char";
     }
 
     fn getStaticSize(&self) -> u32 {
-        return 1;
+        return 4;
     }
 
     fn getImplicitConversions(&self) -> &Vec<Type> {

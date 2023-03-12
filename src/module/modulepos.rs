@@ -143,6 +143,6 @@ impl ModuleRange {
         return ModuleRange {
             startPos: module.getModulePos(startIndex),
             length: endIndex - startIndex,
-        }
+        };
     }
 }

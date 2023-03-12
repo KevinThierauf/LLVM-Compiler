@@ -1,5 +1,5 @@
 use crate::ast::symbol::expr::ExprType;
-use crate::ast::typeinfo::Type;
+use crate::resolver::typeinfo::Type;
 
 pub mod literalbool;
 pub mod literalarray;

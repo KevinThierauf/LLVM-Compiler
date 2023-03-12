@@ -99,7 +99,7 @@ impl<'a> ConflictResolver<'a> {
     }
 }
 
-pub fn resolveConflict<'a>(pos: ModulePos, options: impl Iterator<Item=&'a Symbol>) -> Result<usize, ASTError> {
+pub fn resolveConflict<'a>(pos: ModulePos, options: impl Iterator<Item = &'a Symbol>) -> Result<usize, ASTError> {
     let mut resolver = ConflictResolver::new(pos, options.collect());
 
     resolver.setPreferred(SymbolDiscriminants::FunctionCall, SymbolDiscriminants::Variable);

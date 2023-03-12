@@ -53,7 +53,7 @@ impl ASTError {
                 format!("expected single token, found extra {:?} token", pos.getToken())
             },
             ASTError::MultipleConflict(pos, options) => format!("conflict resolution returned multiple potential symbols at {pos:?}: {}", options.iter().fold(String::new(), |current, (next, tokens, matchString)|
-                current + "\n\t" + &next.replace('\n', " ").replace('\r', "") + "\n\t" + &tokens.iter().fold(String::new(), |current, next| current + next + " ") + "\n\t" + matchString + "\n"
+                current + "\n\t" + &next.replace('\n', " ").replace('\r', "") + "\n\t" + &tokens.iter().fold(String::new(), |current, next| current + next + " ") + "\n\t" + matchString + "\n",
             )),
             ASTError::EliminatedConflict(pos, options) => format!("cannot determine appropriate symbol from multiple conflicting matches at {pos:?}; all possibilities eliminated ({options:?})"),
             ASTError::MatchOptionsFailed(pos, options) => format!("all potential matches failed at {pos:?}{}", options.iter().map(|(description, err)| format!("\n\t{description}: {}", err.getDisplayMessage().replace('\n', "\n\t"))).collect::<Vec<String>>().join("")),
