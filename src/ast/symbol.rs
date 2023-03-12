@@ -24,8 +24,6 @@ use crate::ast::symbol::expr::variableexpr::VariableExpr;
 use crate::ast::symbol::function::FunctionDefinitionSym;
 use crate::ast::symbol::ifstatement::IfSym;
 use crate::ast::symbol::import::ImportSym;
-use crate::ast::symbol::looptype::forloop::ForLoop;
-use crate::ast::symbol::looptype::r#loop::Loop;
 use crate::ast::symbol::looptype::whileloop::WhileLoop;
 use crate::ast::symbol::returnsym::ReturnSym;
 use crate::module::modulepos::ModuleRange;
@@ -55,8 +53,8 @@ pub enum Symbol {
     Break(BreakSym),
     Continue(ContinueSym),
     While(WhileLoop),
-    Loop(Loop),
-    For(ForLoop),
+    // Loop(Loop),
+    // For(ForLoop),
     Return(ReturnSym),
     IfSym(IfSym),
     // structures
@@ -102,8 +100,8 @@ impl Symbol {
             Symbol::LiteralTuple(symbol) => symbol,
             Symbol::Continue(symbol) => symbol,
             Symbol::While(symbol) => symbol,
-            Symbol::Loop(symbol) => symbol,
-            Symbol::For(symbol) => symbol,
+            // Symbol::Loop(symbol) => symbol,
+            // Symbol::For(symbol) => symbol,
             Symbol::Return(symbol) => symbol,
         };
     }
@@ -117,8 +115,8 @@ impl Symbol {
             Symbol::IfSym(_) |
             Symbol::Continue(_) |
             Symbol::While(_) |
-            Symbol::Loop(_) |
-            Symbol::For(_) |
+            // Symbol::Loop(_) |
+            // Symbol::For(_) |
             Symbol::Return(_) |
             Symbol::ImportSym(_) => None,
             Symbol::FunctionCall(symbol) => Some(symbol),
@@ -145,8 +143,8 @@ impl Symbol {
             Symbol::IfSym(_) |
             Symbol::Continue(_) |
             Symbol::While(_) |
-            Symbol::Loop(_) |
-            Symbol::For(_) |
+            // Symbol::Loop(_) |
+            // Symbol::For(_) |
             Symbol::Return(_) |
             Symbol::ImportSym(_) => None,
             Symbol::FunctionCall(symbol) => Some(Box::new(symbol)),
@@ -177,8 +175,8 @@ impl Symbol {
             Symbol::VariableDeclaration(_) |
             Symbol::Continue(_) |
             Symbol::While(_) |
-            Symbol::Loop(_) |
-            Symbol::For(_) |
+            // Symbol::Loop(_) |
+            // Symbol::For(_) |
             Symbol::Return(_) |
             Symbol::Variable(_) => None,
             Symbol::LiteralArray(symbol) => Some(symbol),

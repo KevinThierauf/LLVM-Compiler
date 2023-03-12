@@ -71,7 +71,7 @@ pub fn isCloseParenthesis(c: char) -> Option<ParenthesisType> {
 
 pub fn isTokenOperatorChar(c: char) -> bool {
     return match c {
-        '.' | '+' | '-' | '!' | '?' | '*' | '/' | '%' | '=' | '<' | '>' => true,
+        '.' | '+' | '-' | '!' | '?' | '*' | '/' | '%' | '=' | '<' | '>' | ':' => true,
         _ => false,
     };
 }

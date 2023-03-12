@@ -13,14 +13,23 @@ int function() {
 
 print("Hello, World!")
 
+int var = 0
+outer:
+while var < 10 {
+    var++
+    while false {
+        print("never called")
+    }
+}
+
 class Something {
     int a
     int b
     int c
 
-//    void method() {
+    void method() {
         // do nothing
-//    }
+    }
 }
 
 /*

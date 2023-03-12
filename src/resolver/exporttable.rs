@@ -5,31 +5,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use parking_lot::{Condvar, RawMutex};
 use parking_lot::lock_api::Mutex;
 
-pub struct IncompleteExportTable {
-    // todo
-}
+use crate::module::visibility::Visibility::Public;
+use crate::resolver::exporttable::completeexporttable::CompleteExportTable;
+use crate::resolver::exporttable::completeexporttable::coreexporttable::CORE_EXPORT_TABLE;
+use crate::resolver::exporttable::incompleteexporttable::{IncompleteExportTable, VisibilityExportHandler};
 
-impl IncompleteExportTable {
-    pub fn merge(&mut self, other: Self) {
-        todo!()
-    }
-}
-
-impl IncompleteExportTable {
-    pub fn new() -> Self {
-        todo!()
-    }
-}
-
-pub struct CompleteExportTable {
-    // todo
-}
-
-impl CompleteExportTable {
-    pub fn new(exportTable: &IncompleteExportTable) -> Arc<Self> {
-        todo!()
-    }
-}
+pub mod completeexporttable;
+pub mod incompleteexporttable;
 
 enum ExportTableState {
     Incomplete(IncompleteExportTable),
@@ -65,40 +47,45 @@ impl ExportImpl {
     fn setComplete(&self) {
         let mut exportImpl = self.table.lock();
         *exportImpl = match exportImpl.deref() {
-            ExportTableState::Incomplete(incompleteTable) => ExportTableState::Complete(CompleteExportTable::new(incompleteTable)),
+            ExportTableState::Incomplete(incompleteTable) => ExportTableState::Complete(CompleteExportTable::new(incompleteTable, vec![CORE_EXPORT_TABLE.to_owned()])),
             ExportTableState::Complete(_) => panic!("export table has already been set to complete"),
         };
     }
 }
 
-pub struct ExportTableMutex {
+pub struct ModuleExportTable {
     exportState: Arc<ExportImpl>,
 }
 
-impl Clone for ExportTableMutex {
+impl Clone for ModuleExportTable {
     fn clone(&self) -> Self {
-        self.exportState.writers.fetch_add(1, Ordering::SeqCst);
+        self.addWriter();
         return Self {
             exportState: self.exportState.to_owned(),
         };
     }
 }
 
-impl Drop for ExportTableMutex {
+impl Drop for ModuleExportTable {
     fn drop(&mut self) {
         self.removeWriter();
     }
 }
 
-impl ExportTableMutex {
+impl ModuleExportTable {
     pub fn new() -> Self {
         return Self {
             exportState: Arc::new(ExportImpl {
                 writers: AtomicUsize::new(1),
                 conditional: Default::default(),
-                table: Mutex::new(ExportTableState::Incomplete(IncompleteExportTable::new())),
+                table: Mutex::new(ExportTableState::Incomplete(IncompleteExportTable::new(VisibilityExportHandler(Public)))),
             }),
         };
+    }
+
+    fn addWriter(&self) {
+        let _v = self.exportState.writers.fetch_add(1, Ordering::SeqCst);
+        debug_assert_ne!(_v, 1, "writing has been closed");
     }
 
     fn removeWriter(&self) {

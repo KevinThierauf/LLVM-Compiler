@@ -7,6 +7,7 @@ use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::symbol::block::BlockSym;
 use crate::ast::symbol::breaksym::BreakSym;
 use crate::ast::symbol::classdefinition::{ClassDefinitionSym, ClassFieldDefinition, ClassMember, ClassStaticFieldDefinition};
+use crate::ast::symbol::continuesym::ContinueSym;
 use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::expr::functioncall::FunctionCallExpr;
 use crate::ast::symbol::expr::literal::literalarray::LiteralArray;
@@ -24,8 +25,9 @@ use crate::ast::symbol::function::{FunctionAttribute, FunctionDefinitionSym, Fun
 use crate::ast::symbol::ifstatement::{ElseSym, IfSym};
 use crate::ast::symbol::import::ImportSym;
 use crate::ast::symbol::looptype::label::Label;
+use crate::ast::symbol::looptype::whileloop::WhileLoop;
 use crate::ast::symbol::returnsym::ReturnSym;
-use crate::ast::tokensource::conflictresolution::resolveConflict;
+use crate::ast::tokensource::conflictresolution::{resolveClassDefinitionConflict, resolveSymbolConflict};
 use crate::ast::tokensource::symbolparser::{getLazyMatch, getMappedMatch, getMatchAnyOf, getMatchFrom, getMatchOneOf, getRepeatingMatch, Match, MatchOption, MatchType, OptionalMatch};
 use crate::module::{FileRange, Keyword, Module, Operator, ParenthesisType, QuoteType, TokenType, TokenTypeDiscriminants};
 use crate::module::modulepos::{ModulePos, ModuleRange};
@@ -161,9 +163,11 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
     return getMappedMatch(getLazyMatch(|| (getRepeatingMatch(0, getMatchSemicolan()), getMatchAnyOf(&[
         MatchOption::new(getMatchBlockSym(), |_, v| Ok(Symbol::Block(v))),
         MatchOption::new(getMatchBreakSym(), |_, v| Ok(Symbol::Break(v))),
+        MatchOption::new(getMatchContinueSym(), |_, v| Ok(Symbol::Continue(v))),
         MatchOption::new(getMatchClassDefinitionSym(), |_, v| Ok(Symbol::ClassDefinition(v))),
         MatchOption::new(getMatchFunctionDefinitionSym(), |_, v| Ok(Symbol::FunctionDefinition(v))),
         MatchOption::new(getMatchIfSym(), |_, v| Ok(Symbol::IfSym(v))),
+        MatchOption::new(getMatchWhileSym(), |_, v| Ok(Symbol::While(v))),
         MatchOption::new(getMatchReturnSym(), |_, v| Ok(Symbol::Return(v))),
         MatchOption::new(getMatchImportSym(), |_, v| Ok(Symbol::ImportSym(v))),
         MatchOption::new(getMatchFunctionCallExpr(), |_, v| Ok(Symbol::FunctionCall(v))),
@@ -182,11 +186,11 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
         return if matchVec.is_empty() {
             Err(ASTError::MatchOptionsFailed(pos, errVec))
         } else {
-            let index = resolveConflict(pos, matchVec.iter_mut().map(|symbolMatch| {
+            let index = resolveSymbolConflict(pos, matchVec.iter_mut().map(|symbolMatch| {
                 if let Symbol::Operator(expr) = symbolMatch.getValue() {
                     symbolMatch.range = expr.getRange().to_owned();
                 }
-                symbolMatch.getValue()
+                &*symbolMatch
             }))?;
             Ok(matchVec.swap_remove(index))
         };
@@ -221,10 +225,10 @@ pub fn getMatchExcludingExpr(excludeOperator: bool, excludeDeclaration: bool) ->
         } else {
             let mut symbolVec = options.into_iter().map(|symbolMatch| {
                 let (range, symbol) = symbolMatch.take();
-                (range, symbol.toSymbol())
+                Match::new(range, symbol.toSymbol())
             }).collect::<Vec<_>>();
-            let index = resolveConflict(pos, symbolVec.iter().map(|(_, s)| s))?;
-            let (range, symbol) = symbolVec.swap_remove(index);
+            let index = resolveSymbolConflict(pos, symbolVec.iter())?;
+            let (range, symbol) = symbolVec.swap_remove(index).take();
             Ok(Match::new(range, symbol.toExpression().unwrap()))
         };
     });
@@ -291,8 +295,25 @@ pub fn getMatchBreakSym() -> impl MatchType<Value = BreakSym> {
     );
 }
 
+pub fn getMatchContinueSym() -> impl MatchType<Value = ContinueSym> {
+    // continue
+    // continue label
+    return getMappedMatch(
+        (
+            getMatchKeyword(Keyword::Continue), // continue
+            OptionalMatch::new(getMatchIdentifier()), // label
+        ), |range, (_, label)|
+            Ok(ContinueSym {
+                range,
+                label: label.map(|identifier| Label {
+                    identifier,
+                }),
+            }),
+    );
+}
+
 pub fn getMatchClassMember() -> impl MatchType<Value = ClassMember> {
-    return getMatchOneOf(&[
+    return getMatchAnyOf(&[
         // type name = value
         MatchOption::new(
             (
@@ -353,7 +374,14 @@ pub fn getMatchClassMember() -> impl MatchType<Value = ClassMember> {
             getMatchFunctionDefinitionSym(),
             |_, function| Ok(ClassMember::FunctionDefinition(function)),
         ),
-    ]);
+    ], |pos, mut options, err| {
+        return if options.is_empty() {
+            Err(ASTError::MatchOptionsFailed(pos, err))
+        } else {
+            let index = resolveClassDefinitionConflict(pos, options.iter())?;
+            return Ok(options.swap_remove(index));
+        };
+    });
 }
 
 pub fn getMatchClassDefinitionSym() -> impl MatchType<Value = ClassDefinitionSym> {
@@ -485,6 +513,27 @@ pub fn getMatchIfSym() -> impl MatchType<Value = IfSym> {
                 elseExpr: elseExpr.map(|symbol| Box::new(ElseSym {
                     symbol,
                 })),
+            })
+        });
+}
+
+pub fn getMatchWhileSym() -> impl MatchType<Value = WhileLoop> {
+    // label: while condition { symbols }
+    // while condition { symbols }
+    return getMappedMatch(
+        (
+            OptionalMatch::new((getMatchIdentifier(), getMatchOperator(Operator::Colon))),
+            getMatchKeyword(Keyword::While), // while
+            getMatchExpr(), // condition
+            getMatchSymbol(), // symbol
+        ), |range, (label, _, condition, symbol)| {
+            Ok(WhileLoop {
+                symbol: Box::new(symbol),
+                condition,
+                range,
+                label: label.map(|(identifier, _)| Label {
+                    identifier,
+                }),
             })
         });
 }

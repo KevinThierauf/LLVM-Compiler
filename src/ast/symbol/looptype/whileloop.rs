@@ -1,14 +1,15 @@
 use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::looptype::label::Label;
 use crate::ast::symbol::looptype::LoopType;
-use crate::ast::symbol::SymbolType;
+use crate::ast::symbol::{Symbol, SymbolType};
 use crate::module::modulepos::ModuleRange;
 
 #[derive(Debug)]
 pub struct WhileLoop {
-    range: ModuleRange,
-    conditional: Expr,
-    label: Option<Label>,
+    pub range: ModuleRange,
+    pub condition: Expr,
+    pub symbol: Box<Symbol>,
+    pub label: Option<Label>,
 }
 
 impl SymbolType for WhileLoop {

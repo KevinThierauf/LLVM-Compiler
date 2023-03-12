@@ -4,6 +4,7 @@ use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::module::modulepos::ModuleRange;
+use crate::resolver::typeinfo::primitive::integer::INTEGER_TYPE;
 use crate::resolver::typeinfo::Type;
 
 pub struct LiteralInteger {
@@ -31,6 +32,6 @@ impl SymbolType for LiteralInteger {
 
 impl LiteralType for LiteralInteger {
     fn getLiteralType(&self) -> Type {
-        todo!()
+        return INTEGER_TYPE.to_owned();
     }
 }

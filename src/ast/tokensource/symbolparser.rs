@@ -17,7 +17,7 @@ pub struct Match<T> {
     value: T,
 }
 
-impl<T: Debug> Match<T> {
+impl<T> Match<T> {
     pub fn new(range: ModuleRange, value: T) -> Self {
         return Self {
             range,

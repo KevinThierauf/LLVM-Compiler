@@ -1,6 +1,6 @@
 use crate::module::Keyword;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Visibility {
     Public,
     Private,

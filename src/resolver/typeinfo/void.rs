@@ -1,15 +1,13 @@
-use std::marker::PhantomData;
 use std::sync::Arc;
 
 use once_cell::sync::Lazy;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
 
-pub static VOID_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Void { phantom: PhantomData })));
+pub static VOID_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Void { implicitConversions: vec![] })));
 
 pub struct Void {
-    // prevent construction
-    phantom: PhantomData<()>,
+    implicitConversions: Vec<Type>,
 }
 
 impl TypeInfo for Void {
@@ -22,6 +20,6 @@ impl TypeInfo for Void {
     }
 
     fn getImplicitConversions(&self) -> &Vec<Type> {
-        todo!()
+        return &self.implicitConversions;
     }
 }

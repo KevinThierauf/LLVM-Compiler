@@ -1,40 +1,51 @@
+use std::rc::Rc;
+
 use crate::ast::AbstractSyntaxTree;
-use crate::ast::symbol::Symbol;
-use crate::resolver::exporttable::ExportTableMutex;
+use crate::module::visibility::Visibility::Private;
+use crate::resolver::exporttable::ModuleExportTable;
+use crate::resolver::exporttable::incompleteexporttable::{IncompleteExportTable, VisibilityExportHandler};
 use crate::resolver::resolvedast::ResolvedAST;
 
 pub mod resolutionselector;
 pub mod exporttable;
 pub mod resolvedast;
 pub mod typeinfo;
+pub mod function;
+pub mod resolutionerror;
 
 pub struct Resolver {
-    ast: Vec<Symbol>,
-    exportTable: ExportTableMutex,
+    ast: Rc<AbstractSyntaxTree>,
+    exportTable: ModuleExportTable,
+    privateExportTable: IncompleteExportTable,
 }
 
 impl Resolver {
-    fn new(ast: AbstractSyntaxTree, exportTable: ExportTableMutex) -> Self {
-        return Self {
-            ast: ast.take(),
+    pub fn new(ast: Rc<AbstractSyntaxTree>, exportTable: ModuleExportTable) -> Self {
+        let mut resolver = Self {
+            ast,
             exportTable,
+            privateExportTable: IncompleteExportTable::new(VisibilityExportHandler(Private)),
         };
-    }
-
-    pub fn resolve(ast: AbstractSyntaxTree, exportTable: ExportTableMutex) -> Self {
-        let mut resolver = Self::new(ast, exportTable);
-        resolver.resolveExports();
+        resolver.collectExports();
         return resolver;
     }
 
-    // resolve public symbols
-    // public symbols (across modules) must be resolved before private symbols
-    fn resolveExports(&mut self) {
-        todo!()
+    // collect exported symbols
+    // exported symbols must be resolved before other symbols reference them
+    fn collectExports(&mut self) {
+        for index in 0..self.ast.getSymbols().len() {
+            self.privateExportTable.addSymbolIfExported(self.ast.getPos(index));
+        }
+        self.exportTable.getIncompleteExportTable(|table| {
+            for index in 0..self.ast.getSymbols().len() {
+                table.addSymbolIfExported(self.ast.getPos(index));
+            }
+        });
     }
 
     // resolve private symbols
     pub fn getResolvedAST(self) -> ResolvedAST {
+        let table = self.exportTable.getCompleteExportTableBlocking();
         todo!()
     }
 }

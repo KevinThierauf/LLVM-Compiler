@@ -4,6 +4,7 @@ use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::module::modulepos::ModuleRange;
+use crate::resolver::typeinfo::primitive::float::FLOAT_TYPE;
 use crate::resolver::typeinfo::Type;
 
 pub struct LiteralFloat {
@@ -31,6 +32,6 @@ impl SymbolType for LiteralFloat {
 
 impl LiteralType for LiteralFloat {
     fn getLiteralType(&self) -> Type {
-        todo!()
+        return FLOAT_TYPE.to_owned();
     }
 }

@@ -1,3 +1,4 @@
+use strum_macros::EnumDiscriminants;
 use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::function::FunctionDefinitionSym;
 use crate::ast::symbol::SymbolType;
@@ -21,7 +22,7 @@ pub struct ClassStaticFieldDefinition {
     pub defaultValue: Option<Expr>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, EnumDiscriminants)]
 pub enum ClassMember {
     FieldDefinition(ClassFieldDefinition),
     FunctionDefinition(FunctionDefinitionSym),

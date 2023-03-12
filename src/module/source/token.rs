@@ -73,6 +73,8 @@ pub enum Operator {
     Range,
     // ...
     Ellipsis,
+    // :
+    Colon,
     // ?
     ErrorPropagation,
     // as type
@@ -130,13 +132,13 @@ impl Operator {
             Operator::Plus | Operator::Minus => 5,
             Operator::Mult | Operator::Div | Operator::Mod => 6,
             Operator::ErrorPropagation | Operator::Dot | Operator::Cast | Operator::Not | Operator::Increment | Operator::Decrement => 10,
-            Operator::Ellipsis => 20,
+            Operator::Ellipsis | Operator::Colon => 20,
         };
     }
 
     pub fn getOperands(&self) -> usize {
         return match self {
-            Operator::Increment | Operator::Decrement | Operator::Not | Operator::Ellipsis | Operator::ErrorPropagation | Operator::Cast => 1,
+            Operator::Increment | Operator::Decrement | Operator::Not | Operator::Ellipsis | Operator::Colon | Operator::ErrorPropagation | Operator::Cast => 1,
             Operator::Dot | Operator::Plus | Operator::Minus | Operator::Mult | Operator::Div | Operator::Mod | Operator::PlusAssign | Operator::MinusAssign | Operator::MultAssign | Operator::DivAssign | Operator::ModAssign | Operator::And | Operator::Or | Operator::Greater | Operator::Less | Operator::GreaterEq | Operator::LessEq | Operator::CompareEq | Operator::CompareNotEq | Operator::AssignEq => 2,
             Operator::Range => 2,
         };
@@ -150,6 +152,7 @@ impl Operator {
             Operator::Dot => ".",
             Operator::Range => "..",
             Operator::Ellipsis => "...",
+            Operator::Colon => ":",
             Operator::ErrorPropagation => "?",
             Operator::Cast => "as",
             Operator::Plus => "+",
@@ -177,7 +180,7 @@ impl Operator {
     pub fn isKeywordOperator(&self) -> bool {
         return match self {
             Operator::And | Operator::Or | Operator::Cast => true,
-            Operator::Increment | Operator::Decrement | Operator::Not | Operator::Dot | Operator::Range | Operator::Ellipsis | Operator::ErrorPropagation | Operator::Plus | Operator::Minus | Operator::Mult | Operator::Div | Operator::Mod | Operator::PlusAssign | Operator::MinusAssign | Operator::MultAssign | Operator::DivAssign | Operator::ModAssign | Operator::Greater | Operator::Less | Operator::GreaterEq | Operator::LessEq | Operator::CompareEq | Operator::CompareNotEq | Operator::AssignEq => false,
+            Operator::Increment | Operator::Decrement | Operator::Not | Operator::Dot | Operator::Range | Operator::Ellipsis | Operator::Colon | Operator::ErrorPropagation | Operator::Plus | Operator::Minus | Operator::Mult | Operator::Div | Operator::Mod | Operator::PlusAssign | Operator::MinusAssign | Operator::MultAssign | Operator::DivAssign | Operator::ModAssign | Operator::Greater | Operator::Less | Operator::GreaterEq | Operator::LessEq | Operator::CompareEq | Operator::CompareNotEq | Operator::AssignEq => false,
         };
     }
 

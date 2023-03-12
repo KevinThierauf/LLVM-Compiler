@@ -3,7 +3,7 @@ use crate::resolver::typeinfo::Type;
 
 #[derive(Debug)]
 #[cfg_attr(debug_assertions, derive(Eq, PartialEq, Ord, PartialOrd))]
-pub enum ResolutionError {
+pub enum TypeResolutionError {
     // forced to be multiple types
     Conflict(Vec<(Type, Vec<ModuleRange>)>),
     // forced type explicitly excluded

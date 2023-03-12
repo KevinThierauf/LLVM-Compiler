@@ -1,15 +1,13 @@
-use std::marker::PhantomData;
 use std::sync::Arc;
 
 use once_cell::sync::Lazy;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
 
-pub static BOOLEAN_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Boolean { phantom: PhantomData })));
+pub static BOOLEAN_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Boolean { implicitConversions: vec![] })));
 
 pub struct Boolean {
-    // prevent construction
-    phantom: PhantomData<()>,
+    implicitConversions: Vec<Type>,
 }
 
 impl TypeInfo for Boolean {
@@ -22,6 +20,6 @@ impl TypeInfo for Boolean {
     }
 
     fn getImplicitConversions(&self) -> &Vec<Type> {
-        todo!()
+        return &self.implicitConversions;
     }
 }

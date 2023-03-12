@@ -1,16 +1,16 @@
 use crate::module::modulepos::ModuleRange;
 use crate::resolver::resolutionselector::resolutionconstraint::{ResolutionConstraint, ResolutionConstraintType};
 use crate::resolver::resolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
-use crate::resolver::resolutionselector::resolutionerror::ResolutionError;
+use crate::resolver::resolutionselector::typeresolutionerror::TypeResolutionError;
 use crate::resolver::typeinfo::Type;
 
 pub mod resolutionconstraint;
 pub mod resolutionconstraintsolver;
-pub mod resolutionerror;
+pub mod typeresolutionerror;
 
 enum ResolutionState {
     Valid(Type),
-    Invalid(Vec<ResolutionError>),
+    Invalid(Vec<TypeResolutionError>),
     Unresolved,
 }
 
@@ -41,7 +41,7 @@ impl ResolutionSelector {
         self.constraints.push(ResolutionConstraint::new(moduleRange, constraint));
     }
 
-    pub fn getResolvedExprType(&self) -> Option<Result<Type, &Vec<ResolutionError>>> {
+    pub fn getResolvedExprType(&self) -> Option<Result<Type, &Vec<TypeResolutionError>>> {
         return match &self.resolutionState {
             ResolutionState::Valid(typeInfo) => Some(Ok(typeInfo.to_owned())),
             ResolutionState::Invalid(errorVec) => Some(Err(errorVec)),

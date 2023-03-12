@@ -6,7 +6,7 @@ use hashbrown::HashSet;
 use priority_queue::PriorityQueue;
 
 use crate::module::modulepos::ModuleRange;
-use crate::resolver::resolutionselector::ResolutionError;
+use crate::resolver::resolutionselector::TypeResolutionError;
 use crate::resolver::typeinfo::Type;
 
 #[derive(Debug)]
@@ -170,7 +170,7 @@ impl ResolutionConstraintSolver {
         return self.priorityQueue.get_priority(value).map(|v| *v).unwrap_or_default();
     }
 
-    fn getSelectedType(&self) -> Result<Type, Vec<ResolutionError>> {
+    fn getSelectedType(&self) -> Result<Type, Vec<TypeResolutionError>> {
         debug_assert!(self.requiredTypes.is_empty());
 
         let mut priorityIter = self.priorityQueue.iter();
@@ -193,7 +193,7 @@ impl ResolutionConstraintSolver {
         match currentPriorityVec.len() {
             0 => {}
             1 => return Ok(currentPriorityVec[0].to_owned()),
-            _ => return Err(vec![ResolutionError::Ambiguous(currentPriorityVec)]),
+            _ => return Err(vec![TypeResolutionError::Ambiguous(currentPriorityVec)]),
         };
 
         let mut optionVec = Vec::new();
@@ -202,7 +202,7 @@ impl ResolutionConstraintSolver {
         if let Some(subsetTypes) = &self.subsetTypes {
             for typeInfo in subsetTypes {
                 if let Some(err) = self.getExcludedRange(&typeInfo.value) {
-                    errorVec.push(ResolutionError::Excluded { selected: typeInfo.value.to_owned(), excludedRange: err })
+                    errorVec.push(TypeResolutionError::Excluded { selected: typeInfo.value.to_owned(), excludedRange: err })
                 } else {
                     optionVec.push(&typeInfo.value);
                 }
@@ -212,14 +212,14 @@ impl ResolutionConstraintSolver {
         return match optionVec.len() {
             0 => {
                 errorVec.push(if self.subsetTypes.is_some() || !self.priorityQueue.is_empty() {
-                    ResolutionError::Eliminated
+                    TypeResolutionError::Eliminated
                 } else {
-                    ResolutionError::Unconstrained
+                    TypeResolutionError::Unconstrained
                 });
                 Err(errorVec)
             }
             1 => Ok(optionVec[0].to_owned()),
-            _ => Err(vec![ResolutionError::Ambiguous(optionVec.into_iter().map(|v| v.to_owned()).collect())])
+            _ => Err(vec![TypeResolutionError::Ambiguous(optionVec.into_iter().map(|v| v.to_owned()).collect())])
         };
     }
 
@@ -240,14 +240,14 @@ impl ResolutionConstraintSolver {
         return vec;
     }
 
-    pub fn take(self) -> Result<Type, Vec<ResolutionError>> {
+    pub fn take(self) -> Result<Type, Vec<TypeResolutionError>> {
         return match self.requiredTypes.len() {
             0 => self.getSelectedType(),
             1 => {
                 let typeInfo = self.requiredTypes.iter().next().unwrap();
 
                 if let Some(excluded) = self.getExcludedRange(&typeInfo.value) {
-                    Err(vec![ResolutionError::ForcedExcluded {
+                    Err(vec![TypeResolutionError::ForcedExcluded {
                         forced: typeInfo.value.to_owned(),
                         forcedRange: typeInfo.range.to_owned(),
                         excludedRange: excluded,
@@ -257,7 +257,7 @@ impl ResolutionConstraintSolver {
                         if subsetTypes.binary_search(typeInfo).is_ok() {
                             Ok(typeInfo.value.to_owned())
                         } else {
-                            Err(vec![ResolutionError::ForcedSubset {
+                            Err(vec![TypeResolutionError::ForcedSubset {
                                 forced: typeInfo.value.to_owned(),
                                 forcedRange: typeInfo.range.to_owned(),
                                 excludedRange: self.getSubsetExcludedRange(&typeInfo.value),
@@ -268,7 +268,7 @@ impl ResolutionConstraintSolver {
                     }
                 }
             }
-            _ => Err(vec![ResolutionError::Conflict(self.requiredTypes.into_iter().map(|v| (v.value, v.range)).collect())])
+            _ => Err(vec![TypeResolutionError::Conflict(self.requiredTypes.into_iter().map(|v| (v.value, v.range)).collect())])
         };
     }
 }
@@ -278,7 +278,7 @@ mod test {
     use crate::module::Module;
     use crate::module::modulepos::ModuleRange;
     use crate::resolver::resolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
-    use crate::resolver::resolutionselector::resolutionerror::ResolutionError;
+    use crate::resolver::resolutionselector::typeresolutionerror::TypeResolutionError;
     use crate::resolver::typeinfo::primitive::boolean::BOOLEAN_TYPE;
     use crate::resolver::typeinfo::primitive::character::CHARACTER_TYPE;
     use crate::resolver::typeinfo::Type;
@@ -291,7 +291,7 @@ mod test {
         return RANGE.with(|v| v.to_owned());
     }
 
-    fn sortError(error: &mut ResolutionError) {
+    fn sortError(error: &mut TypeResolutionError) {
         fn sortInner(vec: &mut Vec<(Type, Vec<ModuleRange>)>) {
             vec.sort();
             for (_, v) in vec {
@@ -300,23 +300,23 @@ mod test {
         }
 
         match error {
-            ResolutionError::Conflict(vec) => sortInner(vec),
-            ResolutionError::ForcedExcluded { forced: _, forcedRange, excludedRange } => {
+            TypeResolutionError::Conflict(vec) => sortInner(vec),
+            TypeResolutionError::ForcedExcluded { forced: _, forcedRange, excludedRange } => {
                 forcedRange.sort();
                 excludedRange.sort();
             }
-            ResolutionError::ForcedSubset { forced: _, forcedRange, excludedRange } => {
+            TypeResolutionError::ForcedSubset { forced: _, forcedRange, excludedRange } => {
                 forcedRange.sort();
                 excludedRange.sort();
             }
-            ResolutionError::Excluded { selected: _, excludedRange } => excludedRange.sort(),
-            ResolutionError::Ambiguous(vec) => vec.sort(),
-            ResolutionError::Eliminated => {}
-            ResolutionError::Unconstrained => {}
+            TypeResolutionError::Excluded { selected: _, excludedRange } => excludedRange.sort(),
+            TypeResolutionError::Ambiguous(vec) => vec.sort(),
+            TypeResolutionError::Eliminated => {}
+            TypeResolutionError::Unconstrained => {}
         }
     }
 
-    fn assertEq(solver: ResolutionConstraintSolver, expected: Result<Type, Vec<ResolutionError>>) {
+    fn assertEq(solver: ResolutionConstraintSolver, expected: Result<Type, Vec<TypeResolutionError>>) {
         let result = solver.take();
 
         match (result, expected) {
@@ -347,7 +347,7 @@ mod test {
         let mut solver = ResolutionConstraintSolver::new();
         solver.setForced(&BOOLEAN_TYPE, getRange());
         solver.setForced(&CHARACTER_TYPE, getRange());
-        assertEq(solver, Err(vec![ResolutionError::Conflict(vec![(BOOLEAN_TYPE.to_owned(), vec![getRange()]), (CHARACTER_TYPE.to_owned(), vec![getRange()])])]));
+        assertEq(solver, Err(vec![TypeResolutionError::Conflict(vec![(BOOLEAN_TYPE.to_owned(), vec![getRange()]), (CHARACTER_TYPE.to_owned(), vec![getRange()])])]));
     }
 
     #[test]
@@ -355,7 +355,7 @@ mod test {
         let mut solver = ResolutionConstraintSolver::new();
         solver.setForced(&BOOLEAN_TYPE, getRange());
         solver.setSubsetOrdered(&Vec::new(), getRange());
-        assertEq(solver, Err(vec![ResolutionError::ForcedSubset {
+        assertEq(solver, Err(vec![TypeResolutionError::ForcedSubset {
             forced: BOOLEAN_TYPE.to_owned(),
             forcedRange: vec![getRange()],
             excludedRange: vec![getRange()],
@@ -368,20 +368,20 @@ mod test {
         solver.setPriority(&BOOLEAN_TYPE, 1);
         solver.setExcluded(&BOOLEAN_TYPE, getRange());
         assert!(solver.isExcluded(&BOOLEAN_TYPE));
-        assertEq(solver, Err(vec![ResolutionError::Eliminated]));
+        assertEq(solver, Err(vec![TypeResolutionError::Eliminated]));
     }
 
     #[test]
     fn testEliminated() {
         let mut solver = ResolutionConstraintSolver::new();
         solver.setSubsetOrdered(&Vec::new(), getRange());
-        assertEq(solver, Err(vec![ResolutionError::Eliminated]));
+        assertEq(solver, Err(vec![TypeResolutionError::Eliminated]));
     }
 
     #[test]
     fn testUnconstrained() {
         let solver = ResolutionConstraintSolver::new();
-        assertEq(solver, Err(vec![ResolutionError::Unconstrained]));
+        assertEq(solver, Err(vec![TypeResolutionError::Unconstrained]));
     }
 
     #[test]
@@ -389,7 +389,7 @@ mod test {
         let mut solver = ResolutionConstraintSolver::new();
         solver.setExcluded(&BOOLEAN_TYPE, getRange());
         assert!(solver.isExcluded(&BOOLEAN_TYPE));
-        assertEq(solver, Err(vec![ResolutionError::Unconstrained]));
+        assertEq(solver, Err(vec![TypeResolutionError::Unconstrained]));
     }
 
     #[test]
@@ -398,11 +398,11 @@ mod test {
         solver.setExcluded(&BOOLEAN_TYPE, getRange());
         solver.setSubsetOrdered(&vec![BOOLEAN_TYPE.to_owned()], getRange());
         assertEq(solver, Err(vec![
-            ResolutionError::Excluded {
+            TypeResolutionError::Excluded {
                 selected: BOOLEAN_TYPE.to_owned(),
                 excludedRange: vec![getRange()],
             },
-            ResolutionError::Eliminated,
+            TypeResolutionError::Eliminated,
         ]));
     }
 
