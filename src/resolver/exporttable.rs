@@ -115,12 +115,12 @@ impl GlobalExportTable {
 
     fn addWriter(&self) {
         let _v = self.exportState.writers.fetch_add(1, Ordering::SeqCst);
-        debug_assert_ne!(_v, 1, "writing has been closed");
+        debug_assert_ne!(_v, 0, "writing has been closed");
     }
 
     fn removeWriter(&self) {
         let writers = self.exportState.writers.fetch_sub(1, Ordering::Relaxed);
-        if writers == 0 {
+        if writers == 1 {
             let mut lock = self.exportState.table.lock();
             let mut exportTableState = ExportTableState::CompleteFailed; // tmp
             swap(&mut exportTableState, lock.deref_mut());
@@ -149,6 +149,7 @@ impl GlobalExportTable {
     }
 
     pub fn getExportErrorsBlocking(&self) -> Result<(), Vec<ResolutionError>> {
+        self.removeWriter();
         return self.exportState.getExportErrors();
     }
 }

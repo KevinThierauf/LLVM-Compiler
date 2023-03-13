@@ -64,7 +64,8 @@ impl Compiler {
         // convert tokens into syntax expressions
         let ast = AbstractSyntaxTree::new(module).map_err(|error| CompilerError::ASTParseError(error))?;
         // first step of resolution (identifying export symbols)
-        // global exports will be resolved after all other symbols have been resolved
+        // local exports will be resolved after all global symbols have been resolved
+        // global exports will be resolved after all global symbols have been identified
         return Ok(Resolver::new(ast, exportTable));
     }
 
