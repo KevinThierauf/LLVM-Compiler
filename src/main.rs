@@ -1,34 +1,27 @@
 #![allow(non_snake_case)]
 
+use std::process::exit;
 use std::time::SystemTime;
 
-use crate::ast::AbstractSyntaxTree;
-use crate::module::{Module, SourceFile};
+use compiler::Compiler;
 
 pub mod module;
-pub mod logger;
 pub mod ast;
 pub mod resolver;
+pub mod compiler;
+pub mod backend;
 
 fn main() {
-    const EXAMPLE_PATH: &'static str = "examples/source.txt";
-
+    let sourcePathVec = vec!["examples/source.txt".to_owned()];
     let start = SystemTime::now();
-    let result = Module::new(SourceFile::new(EXAMPLE_PATH.into()).expect("failed to create SourceFile from path"));
-    let end = SystemTime::now();
-    match result {
-        Ok(module) => {
-            match AbstractSyntaxTree::new(module) {
-                Ok(ast) => {
-                    println!("{:#?}", ast);
-                }
-                Err(err) => println!("{}", err.getDisplayMessage()),
-            }
-        }
-        Err(err) => {
-            println!("{}", err.getDisplayMessage())
-        }
-    }
+    let compiler = Compiler::new(None, sourcePathVec);
 
-    println!("Token parsing completed in {}ms", end.duration_since(start).unwrap().as_millis());
+    if let Some(result) = compiler.getCompiledResult() {
+        let end = SystemTime::now();
+        println!("Compilation completed in {}ms", end.duration_since(start).unwrap().as_millis());
+
+        // todo - handle compiled module
+    } else {
+        exit(-1);
+    }
 }

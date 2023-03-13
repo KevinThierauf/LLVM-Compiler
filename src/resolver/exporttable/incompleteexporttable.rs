@@ -1,11 +1,13 @@
+use std::fmt::Debug;
 use crate::ast::symbol::Symbol;
 use crate::ast::SymbolPos;
 use crate::module::visibility::Visibility;
 
-pub trait ExportHandler: 'static {
+pub trait ExportHandler: 'static + Debug + Send + Sync {
     fn isExported(&self, pos: &SymbolPos, visibility: Visibility) -> bool;
 }
 
+#[derive(Debug)]
 pub struct VisibilityExportHandler(pub Visibility);
 
 impl ExportHandler for VisibilityExportHandler {
@@ -14,26 +16,27 @@ impl ExportHandler for VisibilityExportHandler {
     }
 }
 
+#[derive(Debug)]
 pub struct IncompleteExportTable {
-    symbolVec: Vec<SymbolPos>,
+    // symbolVec: Vec<SymbolPos>,
     exportHandler: Box<dyn ExportHandler>,
 }
 
 impl IncompleteExportTable {
     pub fn new(exportHandler: impl ExportHandler) -> Self {
         return Self {
-            symbolVec: Vec::new(),
+            // symbolVec: Vec::new(),
             exportHandler: Box::new(exportHandler),
         };
     }
 
     pub fn merge(&mut self, mut other: Self) {
-        self.symbolVec.append(&mut other.symbolVec);
+        // self.symbolVec.append(&mut other.symbolVec);
     }
 
     fn addSymbol(&mut self, symbolPos: SymbolPos) {
-        debug_assert!(!self.symbolVec.contains(&symbolPos));
-        self.symbolVec.push(symbolPos);
+        // debug_assert!(!self.symbolVec.contains(&symbolPos));
+        // self.symbolVec.push(symbolPos);
     }
 
     pub fn addSymbolIfExported(&mut self, symbolPos: SymbolPos) {

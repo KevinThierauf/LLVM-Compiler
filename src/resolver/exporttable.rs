@@ -1,3 +1,4 @@
+use std::mem::swap;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -9,13 +10,26 @@ use crate::module::visibility::Visibility::Public;
 use crate::resolver::exporttable::completeexporttable::CompleteExportTable;
 use crate::resolver::exporttable::completeexporttable::coreexporttable::CORE_EXPORT_TABLE;
 use crate::resolver::exporttable::incompleteexporttable::{IncompleteExportTable, VisibilityExportHandler};
+use crate::resolver::resolutionerror::ResolutionError;
 
 pub mod completeexporttable;
 pub mod incompleteexporttable;
 
+#[derive(Debug)]
 enum ExportTableState {
     Incomplete(IncompleteExportTable),
+    NotifyComplete(IncompleteExportTable),
+    CompleteFailed,
     Complete(Arc<CompleteExportTable>),
+}
+
+impl ExportTableState {
+    fn toNotifyComplete(self) -> Self {
+        return match self {
+            ExportTableState::Incomplete(incomplete) => ExportTableState::NotifyComplete(incomplete),
+            _ => panic!("cannot set to notify from complete, current state is not incomplete"),
+        };
+    }
 }
 
 struct ExportImpl {
@@ -25,13 +39,13 @@ struct ExportImpl {
 }
 
 impl ExportImpl {
-    fn getReadTable(&self) -> Arc<CompleteExportTable> {
+    fn getReadTable(&self) -> Option<Arc<CompleteExportTable>> {
         let mut exportImpl = self.table.lock();
         loop {
-            if let ExportTableState::Complete(table) = exportImpl.deref() {
-                return table.to_owned();
-            } else {
-                self.conditional.wait(&mut exportImpl);
+            match exportImpl.deref() {
+                ExportTableState::Complete(table) => return Some(table.to_owned()),
+                ExportTableState::CompleteFailed => return None,
+                ExportTableState::Incomplete(_) | ExportTableState::NotifyComplete(_) => self.conditional.wait(&mut exportImpl),
             }
         }
     }
@@ -44,20 +58,36 @@ impl ExportImpl {
         }
     }
 
-    fn setComplete(&self) {
+    fn getExportErrors(&self) -> Result<(), Vec<ResolutionError>> {
         let mut exportImpl = self.table.lock();
-        *exportImpl = match exportImpl.deref() {
-            ExportTableState::Incomplete(incompleteTable) => ExportTableState::Complete(CompleteExportTable::new(incompleteTable, vec![CORE_EXPORT_TABLE.to_owned()])),
-            ExportTableState::Complete(_) => panic!("export table has already been set to complete"),
-        };
+        loop {
+            match exportImpl.deref() {
+                ExportTableState::NotifyComplete(incompleteTable) => {
+                    let result = match CompleteExportTable::new(incompleteTable, vec![CORE_EXPORT_TABLE.to_owned()]) {
+                        Ok(complete) => {
+                            *exportImpl = ExportTableState::Complete(complete);
+                            Ok(())
+                        },
+                        Err(errorVec) => {
+                            *exportImpl = ExportTableState::CompleteFailed;
+                            Err(errorVec)
+                        }
+                    };
+                    self.conditional.notify_all();
+                    return result;
+                },
+                ExportTableState::Incomplete(_) => self.conditional.wait(&mut exportImpl),
+                ExportTableState::Complete(_) | ExportTableState::CompleteFailed => panic!("export table has already been set to complete"),
+            }
+        }
     }
 }
 
-pub struct ModuleExportTable {
+pub struct GlobalExportTable {
     exportState: Arc<ExportImpl>,
 }
 
-impl Clone for ModuleExportTable {
+impl Clone for GlobalExportTable {
     fn clone(&self) -> Self {
         self.addWriter();
         return Self {
@@ -66,13 +96,13 @@ impl Clone for ModuleExportTable {
     }
 }
 
-impl Drop for ModuleExportTable {
+impl Drop for GlobalExportTable {
     fn drop(&mut self) {
         self.removeWriter();
     }
 }
 
-impl ModuleExportTable {
+impl GlobalExportTable {
     pub fn new() -> Self {
         return Self {
             exportState: Arc::new(ExportImpl {
@@ -91,7 +121,15 @@ impl ModuleExportTable {
     fn removeWriter(&self) {
         let writers = self.exportState.writers.fetch_sub(1, Ordering::Relaxed);
         if writers == 0 {
-            self.exportState.setComplete();
+            let mut lock = self.exportState.table.lock();
+            let mut exportTableState = ExportTableState::CompleteFailed; // tmp
+            swap(&mut exportTableState, lock.deref_mut());
+            if let ExportTableState::Incomplete(incomplete) = exportTableState {
+                *lock = ExportTableState::NotifyComplete(incomplete);
+            } else {
+                panic!("expected state to be incomplete, found {exportTableState:?}");
+            }
+            self.exportState.conditional.notify_all();
         }
     }
 
@@ -105,8 +143,12 @@ impl ModuleExportTable {
         });
     }
 
-    pub fn getCompleteExportTableBlocking(&self) -> Arc<CompleteExportTable> {
+    pub fn getCompleteExportTableBlocking(&self) -> Option<Arc<CompleteExportTable>> {
         self.removeWriter();
         return ExportImpl::getReadTable(self.exportState.deref());
+    }
+
+    pub fn getExportErrorsBlocking(&self) -> Result<(), Vec<ResolutionError>> {
+        return self.exportState.getExportErrors();
     }
 }

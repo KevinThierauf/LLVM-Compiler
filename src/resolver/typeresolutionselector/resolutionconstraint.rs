@@ -1,25 +1,25 @@
-use crate::module::modulepos::ModuleRange;
-use crate::resolver::resolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
+use crate::ast::SymbolPos;
+use crate::resolver::typeresolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
 use crate::resolver::typeinfo::Type;
 
 pub const DEFAULT_RESOLUTION_PRIORITY: u16 = 0;
 pub const NO_IMPLICIT_CONVERSION: u16 = DEFAULT_RESOLUTION_PRIORITY + 100;
 
 pub struct ResolutionConstraint {
-    moduleRange: ModuleRange,
+    SymbolPos: SymbolPos,
     constraintType: ResolutionConstraintType,
 }
 
 impl ResolutionConstraint {
-    pub fn new(moduleRange: ModuleRange, constraintType: ResolutionConstraintType) -> Self {
+    pub fn new(SymbolPos: SymbolPos, constraintType: ResolutionConstraintType) -> Self {
         return Self {
-            moduleRange,
+            SymbolPos,
             constraintType,
         };
     }
 
     pub fn resolve(&self, selector: &mut ResolutionConstraintSolver) {
-        self.constraintType.resolve(&self.moduleRange, selector);
+        self.constraintType.resolve(&self.SymbolPos, selector);
     }
 }
 
@@ -30,15 +30,15 @@ pub enum ResolutionConstraintType {
 }
 
 impl ResolutionConstraintType {
-    pub fn resolve(&self, range: &ModuleRange, selector: &mut ResolutionConstraintSolver) {
+    pub fn resolve(&self, pos: &SymbolPos, selector: &mut ResolutionConstraintSolver) {
         match self {
             ResolutionConstraintType::Exact(typeInfo) => {
                 // forced type will always have priority
-                selector.setForced(typeInfo, range.to_owned());
+                selector.setForced(typeInfo, pos.to_owned());
             }
             ResolutionConstraintType::Implicit(typeInfo) => {
                 selector.setPriority(typeInfo, NO_IMPLICIT_CONVERSION);
-                selector.setSubsetOrdered(typeInfo.getImplicitConversions(), range.to_owned());
+                selector.setSubsetOrdered(typeInfo.getImplicitConversions(), pos.to_owned());
             }
         }
     }

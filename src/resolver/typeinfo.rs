@@ -10,6 +10,7 @@ pub mod void;
 pub mod primitive;
 pub mod class;
 pub mod arraydynamic;
+pub mod string;
 
 pub trait TypeInfo: Sync + Send {
     fn getTypeName(&self) -> &str;

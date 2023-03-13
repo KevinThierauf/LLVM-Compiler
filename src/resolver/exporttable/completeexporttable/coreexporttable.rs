@@ -1,24 +1,36 @@
 use std::sync::Arc;
 
 use once_cell::sync::Lazy;
+use crate::ast::AbstractSyntaxTree;
+use crate::ast::symbol::breaksym::BreakSym;
+use crate::ast::symbol::Symbol;
+use crate::module::Module;
 
 use crate::resolver::exporttable::completeexporttable::CompleteExportTable;
 use crate::resolver::typeinfo::primitive::boolean::BOOLEAN_TYPE;
 use crate::resolver::typeinfo::primitive::character::CHARACTER_TYPE;
 use crate::resolver::typeinfo::primitive::float::FLOAT_TYPE;
 use crate::resolver::typeinfo::primitive::integer::INTEGER_TYPE;
+use crate::resolver::typeinfo::string::STRING_TYPE;
 use crate::resolver::typeinfo::void::VOID_TYPE;
 
 pub static CORE_EXPORT_TABLE: Lazy<Arc<CompleteExportTable>> = Lazy::new(|| {
     let mut builder = CompleteExportTable::newBuilder();
 
-    // primitive types
-    builder.addExportedType(INTEGER_TYPE.to_owned()).expect("failed to build core table");
-    builder.addExportedType(FLOAT_TYPE.to_owned()).expect("failed to build core table");
-    builder.addExportedType(BOOLEAN_TYPE.to_owned()).expect("failed to build core table");
-    builder.addExportedType(CHARACTER_TYPE.to_owned()).expect("failed to build core table");
+    let module = Module::newFrom(vec![]);
+    let ast = AbstractSyntaxTree::newFrom(vec![Symbol::Break(BreakSym {
+        range: module.getModuleRange(0..0),
+        label: None,
+    })]);
+    let pos = ast.getPos(0);
 
-    builder.addExportedType(VOID_TYPE.to_owned()).expect("failed to build core table");
+    // primitive types
+    builder.addExportedType(pos.to_owned(), INTEGER_TYPE.to_owned()).expect("failed to build core table");
+    builder.addExportedType(pos.to_owned(), FLOAT_TYPE.to_owned()).expect("failed to build core table");
+    builder.addExportedType(pos.to_owned(), BOOLEAN_TYPE.to_owned()).expect("failed to build core table");
+    builder.addExportedType(pos.to_owned(), CHARACTER_TYPE.to_owned()).expect("failed to build core table");
+    builder.addExportedType(pos.to_owned(), STRING_TYPE.to_owned()).expect("failed to build core table");
+    builder.addExportedType(pos.to_owned(), VOID_TYPE.to_owned()).expect("failed to build core table");
 
     return Arc::new(builder);
 });

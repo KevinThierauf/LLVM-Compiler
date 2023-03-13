@@ -1,17 +1,17 @@
-use crate::module::modulepos::ModuleRange;
+use crate::ast::SymbolPos;
 use crate::resolver::typeinfo::Type;
 
 #[derive(Debug)]
 #[cfg_attr(debug_assertions, derive(Eq, PartialEq, Ord, PartialOrd))]
 pub enum TypeResolutionError {
     // forced to be multiple types
-    Conflict(Vec<(Type, Vec<ModuleRange>)>),
+    Conflict(Vec<(Type, Vec<SymbolPos>)>),
     // forced type explicitly excluded
-    ForcedExcluded { forced: Type, forcedRange: Vec<ModuleRange>, excludedRange: Vec<ModuleRange> },
+    ForcedExcluded { forced: Type, forcedRange: Vec<SymbolPos>, excludedRange: Vec<SymbolPos> },
     // forced type with invalid subset constraint
-    ForcedSubset { forced: Type, forcedRange: Vec<ModuleRange>, excludedRange: Vec<ModuleRange> },
+    ForcedSubset { forced: Type, forcedRange: Vec<SymbolPos>, excludedRange: Vec<SymbolPos> },
     // selected type explicitly excluded
-    Excluded { selected: Type, excludedRange: Vec<ModuleRange> },
+    Excluded { selected: Type, excludedRange: Vec<SymbolPos> },
     // could be one of several possibilities
     Ambiguous(Vec<Type>),
     // all possibilities eliminated

@@ -77,7 +77,7 @@ impl SymbolPos {
         debug_assert!(index < ast.symbolVec.len());
         return Self {
             ast,
-            index
+            index,
         };
     }
 

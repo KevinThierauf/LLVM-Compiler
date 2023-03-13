@@ -1,7 +1,7 @@
-use crate::module::modulepos::ModuleRange;
-use crate::resolver::resolutionselector::resolutionconstraint::{ResolutionConstraint, ResolutionConstraintType};
-use crate::resolver::resolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
-use crate::resolver::resolutionselector::typeresolutionerror::TypeResolutionError;
+use crate::ast::SymbolPos;
+use crate::resolver::typeresolutionselector::resolutionconstraint::{ResolutionConstraint, ResolutionConstraintType};
+use crate::resolver::typeresolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
+use crate::resolver::typeresolutionselector::typeresolutionerror::TypeResolutionError;
 use crate::resolver::typeinfo::Type;
 
 pub mod resolutionconstraint;
@@ -14,12 +14,12 @@ enum ResolutionState {
     Unresolved,
 }
 
-pub struct ResolutionSelector {
+pub struct TypeResolutionSelector {
     resolutionState: ResolutionState,
     constraints: Vec<ResolutionConstraint>,
 }
 
-impl ResolutionSelector {
+impl TypeResolutionSelector {
     pub fn new() -> Self {
         return Self {
             resolutionState: ResolutionState::Unresolved,
@@ -27,9 +27,9 @@ impl ResolutionSelector {
         };
     }
 
-    pub fn newFrom(range: ModuleRange, constraint: ResolutionConstraintType) -> Self {
+    pub fn newFrom(pos: SymbolPos, constraint: ResolutionConstraintType) -> Self {
         let mut v = Self::new();
-        v.setTypeResolutionConstraint(range, constraint);
+        v.setTypeResolutionConstraint(pos, constraint);
         return v;
     }
 
@@ -37,8 +37,8 @@ impl ResolutionSelector {
         return !matches!(&self.resolutionState, ResolutionState::Unresolved);
     }
 
-    pub fn setTypeResolutionConstraint(&mut self, moduleRange: ModuleRange, constraint: ResolutionConstraintType) {
-        self.constraints.push(ResolutionConstraint::new(moduleRange, constraint));
+    pub fn setTypeResolutionConstraint(&mut self, pos: SymbolPos, constraint: ResolutionConstraintType) {
+        self.constraints.push(ResolutionConstraint::new(pos, constraint));
     }
 
     pub fn getResolvedExprType(&self) -> Option<Result<Type, &Vec<TypeResolutionError>>> {

@@ -4,27 +4,27 @@ use std::hash::{Hash, Hasher};
 
 use hashbrown::HashSet;
 use priority_queue::PriorityQueue;
+use crate::ast::SymbolPos;
 
-use crate::module::modulepos::ModuleRange;
-use crate::resolver::resolutionselector::TypeResolutionError;
+use crate::resolver::typeresolutionselector::TypeResolutionError;
 use crate::resolver::typeinfo::Type;
 
 #[derive(Debug)]
 struct ConstraintInfo<T> {
     value: T,
-    range: Vec<ModuleRange>,
+    positions: Vec<SymbolPos>,
 }
 
 impl<T> ConstraintInfo<T> {
-    fn new(value: T, range: ModuleRange) -> Self {
+    fn new(value: T, pos: SymbolPos) -> Self {
         return Self {
-            range: vec![range],
+            positions: vec![pos],
             value,
         };
     }
 
-    fn addRange(&mut self, range: ModuleRange) {
-        self.range.push(range);
+    fn addPosition(&mut self, pos: SymbolPos) {
+        self.positions.push(pos);
     }
 }
 
@@ -63,7 +63,7 @@ impl<T: Hash> Hash for ConstraintInfo<T> {
 pub struct ResolutionConstraintSolver {
     requiredTypes: HashSet<ConstraintInfo<Type>>,
     subsetTypes: Option<Vec<ConstraintInfo<Type>>>,
-    subsetVec: Vec<(Vec<Type>, ModuleRange)>,
+    subsetVec: Vec<(Vec<Type>, SymbolPos)>,
     excluded: HashSet<ConstraintInfo<Type>>,
     priorityQueue: PriorityQueue<Type, u16>,
 }
@@ -80,7 +80,7 @@ impl ResolutionConstraintSolver {
     }
 
     // must be one of
-    pub fn setSubsetOrdered(&mut self, options: &Vec<Type>, range: ModuleRange) {
+    pub fn setSubsetOrdered(&mut self, options: &Vec<Type>, pos: SymbolPos) {
         fn checkOrdered(subset: &Vec<Type>) -> bool {
             let mut iter = subset.iter();
             let mut prev = iter.next();
@@ -103,7 +103,7 @@ impl ResolutionConstraintSolver {
 
         debug_assert!(checkOrdered(options), "options vector is not ordered");
 
-        self.subsetVec.push((options.to_owned(), range.to_owned()));
+        self.subsetVec.push((options.to_owned(), pos.to_owned()));
         if let Some(subset) = self.subsetTypes.take() {
             debug_assert!(checkOrdered(&subset.iter().map(|constraint| constraint.value.to_owned()).collect()), "subset vector is not ordered");
 
@@ -132,7 +132,7 @@ impl ResolutionConstraintSolver {
                     Ordering::Less => nextSubset = subsetIter.next(),
                     Ordering::Greater => nextOption = optionIter.next(),
                     Ordering::Equal => {
-                        nextSubsetValue.addRange(range.to_owned());
+                        nextSubsetValue.addPosition(pos.to_owned());
                         optionVec.push(nextSubset.unwrap());
 
                         nextSubset = subsetIter.next();
@@ -143,18 +143,18 @@ impl ResolutionConstraintSolver {
 
             self.subsetTypes = Some(optionVec);
         } else {
-            self.subsetTypes = Some(options.iter().map(|v| ConstraintInfo::new(v.to_owned(), range.to_owned())).collect());
+            self.subsetTypes = Some(options.iter().map(|v| ConstraintInfo::new(v.to_owned(), pos.to_owned())).collect());
         }
     }
 
     // must be
-    pub fn setForced(&mut self, value: &Type, range: ModuleRange) {
-        self.requiredTypes.insert(ConstraintInfo::new(value.to_owned(), range));
+    pub fn setForced(&mut self, value: &Type, pos: SymbolPos) {
+        self.requiredTypes.insert(ConstraintInfo::new(value.to_owned(), pos));
     }
 
     // must not be
-    pub fn setExcluded(&mut self, option: &Type, range: ModuleRange) {
-        self.excluded.insert(ConstraintInfo::new(option.to_owned(), range));
+    pub fn setExcluded(&mut self, option: &Type, pos: SymbolPos) {
+        self.excluded.insert(ConstraintInfo::new(option.to_owned(), pos));
     }
 
     pub fn isExcluded(&self, value: &Type) -> bool {
@@ -223,11 +223,11 @@ impl ResolutionConstraintSolver {
         };
     }
 
-    fn getExcludedRange(&self, typeInfo: &Type) -> Option<Vec<ModuleRange>> {
-        return self.excluded.get(typeInfo).map(|constraint| constraint.range.to_owned());
+    fn getExcludedRange(&self, typeInfo: &Type) -> Option<Vec<SymbolPos>> {
+        return self.excluded.get(typeInfo).map(|constraint| constraint.positions.to_owned());
     }
 
-    fn getSubsetExcludedRange(&self, typeInfo: &Type) -> Vec<ModuleRange> {
+    fn getSubsetExcludedRange(&self, typeInfo: &Type) -> Vec<SymbolPos> {
         let mut vec = Vec::new();
 
         for (typeVec, range) in &self.subsetVec {
@@ -249,7 +249,7 @@ impl ResolutionConstraintSolver {
                 if let Some(excluded) = self.getExcludedRange(&typeInfo.value) {
                     Err(vec![TypeResolutionError::ForcedExcluded {
                         forced: typeInfo.value.to_owned(),
-                        forcedRange: typeInfo.range.to_owned(),
+                        forcedRange: typeInfo.positions.to_owned(),
                         excludedRange: excluded,
                     }])
                 } else {
@@ -259,7 +259,7 @@ impl ResolutionConstraintSolver {
                         } else {
                             Err(vec![TypeResolutionError::ForcedSubset {
                                 forced: typeInfo.value.to_owned(),
-                                forcedRange: typeInfo.range.to_owned(),
+                                forcedRange: typeInfo.positions.to_owned(),
                                 excludedRange: self.getSubsetExcludedRange(&typeInfo.value),
                             }])
                         }
@@ -268,31 +268,39 @@ impl ResolutionConstraintSolver {
                     }
                 }
             }
-            _ => Err(vec![TypeResolutionError::Conflict(self.requiredTypes.into_iter().map(|v| (v.value, v.range)).collect())])
+            _ => Err(vec![TypeResolutionError::Conflict(self.requiredTypes.into_iter().map(|v| (v.value, v.positions)).collect())])
         };
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::rc::Rc;
+    use crate::ast::{AbstractSyntaxTree, SymbolPos};
+    use crate::ast::symbol::breaksym::BreakSym;
+    use crate::ast::symbol::Symbol;
     use crate::module::Module;
-    use crate::module::modulepos::ModuleRange;
-    use crate::resolver::resolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
-    use crate::resolver::resolutionselector::typeresolutionerror::TypeResolutionError;
+    use crate::resolver::typeresolutionselector::resolutionconstraintsolver::ResolutionConstraintSolver;
+    use crate::resolver::typeresolutionselector::typeresolutionerror::TypeResolutionError;
     use crate::resolver::typeinfo::primitive::boolean::BOOLEAN_TYPE;
     use crate::resolver::typeinfo::primitive::character::CHARACTER_TYPE;
     use crate::resolver::typeinfo::Type;
 
     thread_local! {
-        static RANGE: ModuleRange = Module::newFrom(Vec::new()).getModuleRange(0..0);
+        static MODULE: Rc<Module> = Module::newFrom(vec![]);
+
+        static RANGE: SymbolPos = AbstractSyntaxTree::newFrom(vec![Symbol::Break(BreakSym {
+            range: MODULE.with(|module| module.getModuleRange(0..0)),
+            label: None,
+        })]).getPos(0);
     }
 
-    fn getRange() -> ModuleRange {
+    fn getRange() -> SymbolPos {
         return RANGE.with(|v| v.to_owned());
     }
 
     fn sortError(error: &mut TypeResolutionError) {
-        fn sortInner(vec: &mut Vec<(Type, Vec<ModuleRange>)>) {
+        fn sortInner(vec: &mut Vec<(Type, Vec<SymbolPos>)>) {
             vec.sort();
             for (_, v) in vec {
                 v.sort();
