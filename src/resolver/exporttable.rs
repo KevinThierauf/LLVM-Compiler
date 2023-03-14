@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use parking_lot::{Condvar, RawMutex};
 use parking_lot::lock_api::Mutex;
 
-use crate::module::visibility::Visibility::Public;
+use crate::ast::visibility::Visibility::Public;
 use crate::resolver::exporttable::completeexporttable::CompleteExportTable;
 use crate::resolver::exporttable::completeexporttable::coreexporttable::CORE_EXPORT_TABLE;
 use crate::resolver::exporttable::incompleteexporttable::{IncompleteExportTable, VisibilityExportHandler};
@@ -21,15 +21,6 @@ enum ExportTableState {
     NotifyComplete(IncompleteExportTable),
     CompleteFailed,
     Complete(Arc<CompleteExportTable>),
-}
-
-impl ExportTableState {
-    fn toNotifyComplete(self) -> Self {
-        return match self {
-            ExportTableState::Incomplete(incomplete) => ExportTableState::NotifyComplete(incomplete),
-            _ => panic!("cannot set to notify from complete, current state is not incomplete"),
-        };
-    }
 }
 
 struct ExportImpl {
@@ -61,13 +52,15 @@ impl ExportImpl {
     fn getExportErrors(&self) -> Result<(), Vec<ResolutionError>> {
         let mut exportImpl = self.table.lock();
         loop {
-            match exportImpl.deref() {
+            let mut exportState = ExportTableState::CompleteFailed; // tmp
+            swap(&mut exportState, exportImpl.deref_mut());
+            match exportState {
                 ExportTableState::NotifyComplete(incompleteTable) => {
                     let result = match CompleteExportTable::new(incompleteTable, vec![CORE_EXPORT_TABLE.to_owned()]) {
                         Ok(complete) => {
                             *exportImpl = ExportTableState::Complete(complete);
                             Ok(())
-                        },
+                        }
                         Err(errorVec) => {
                             *exportImpl = ExportTableState::CompleteFailed;
                             Err(errorVec)
@@ -75,7 +68,7 @@ impl ExportImpl {
                     };
                     self.conditional.notify_all();
                     return result;
-                },
+                }
                 ExportTableState::Incomplete(_) => self.conditional.wait(&mut exportImpl),
                 ExportTableState::Complete(_) | ExportTableState::CompleteFailed => panic!("export table has already been set to complete"),
             }

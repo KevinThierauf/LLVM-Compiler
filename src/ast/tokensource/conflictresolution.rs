@@ -4,7 +4,7 @@ use std::mem::swap;
 use crate::ast::ASTError;
 use crate::ast::symbol::{Symbol, SymbolDiscriminants};
 use crate::ast::symbol::classdefinition::{ClassMember, ClassMemberDiscriminants};
-use crate::ast::tokensource::symbolparser::Match;
+use crate::ast::tokensource::matchtype::Match;
 use crate::module::modulepos::ModulePos;
 
 struct ConflictResolver<'a, S: Debug, SD: Copy + Eq + for<'b> From<&'b S>> {

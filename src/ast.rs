@@ -9,6 +9,7 @@ use crate::module::Module;
 
 mod tokensource;
 pub mod symbol;
+pub mod visibility;
 
 #[derive(Debug)]
 pub struct AbstractSyntaxTree {

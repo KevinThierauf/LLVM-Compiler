@@ -8,7 +8,7 @@ use crate::module::modulepos::ModulePos;
 
 pub mod conflictresolution;
 pub mod tokenparser;
-pub mod symbolparser;
+pub mod matchtype;
 mod matchers;
 
 #[derive(Debug)]

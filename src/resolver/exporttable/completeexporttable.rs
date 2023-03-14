@@ -18,22 +18,10 @@ pub struct CompleteExportTable {
 }
 
 impl CompleteExportTable {
-    pub fn new(exportTable: &IncompleteExportTable, importedTables: Vec<Arc<CompleteExportTable>>) -> Result<Arc<CompleteExportTable>, Vec<ResolutionError>> {
+    pub fn new(exportTable: IncompleteExportTable, importedTables: Vec<Arc<CompleteExportTable>>) -> Result<Arc<CompleteExportTable>, Vec<ResolutionError>> {
         let mut builder = Self::newBuilder();
 
-        // for symbol in &exportTable.symbolVec {
-        //     match symbol.getSymbol() {
-        //         Symbol::ClassDefinition(definition) => {
-        //             // definition.
-        //             todo!()
-        //         }
-        //         Symbol::FunctionDefinition(definition) => {
-        //             todo!()
-        //         }
-        //         _ if IncompleteExportTable::isExportable(symbol).is_some() => unimplemented!("missing export handle for {:?}", symbol.getSymbol()),
-        //         _ => panic!("cannot export symbol {:?}", symbol.getSymbol()),
-        //     }
-        // }
+        //
 
         return Ok(Arc::new(builder));
     }

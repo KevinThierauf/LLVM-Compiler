@@ -11,7 +11,6 @@ use crate::module::source::parseSource;
 pub use crate::module::source::token::*;
 
 pub mod modulepos;
-pub mod visibility;
 mod source;
 
 static MODULE_INDEX: AtomicUsize = AtomicUsize::new(0);

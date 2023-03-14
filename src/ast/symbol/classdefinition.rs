@@ -3,7 +3,7 @@ use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::function::FunctionDefinitionSym;
 use crate::ast::symbol::SymbolType;
 use crate::module::modulepos::{ModulePos, ModuleRange};
-use crate::module::visibility::Visibility;
+use crate::ast::visibility::Visibility;
 
 #[derive(Debug)]
 pub struct ClassFieldDefinition {

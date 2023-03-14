@@ -9,7 +9,8 @@ impl CompiledModule {
     }
     
     pub fn empty() -> Self {
-        todo!()
+        return CompiledModule {
+        };
     }
     
     pub fn merge(&mut self, other: CompiledModule) {

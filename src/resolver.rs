@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::ast::AbstractSyntaxTree;
-use crate::module::visibility::Visibility::{Private, Public};
+use crate::ast::visibility::Visibility::{Private, Public};
 use crate::resolver::exporttable::completeexporttable::CompleteExportTable;
 use crate::resolver::exporttable::completeexporttable::coreexporttable::CORE_EXPORT_TABLE;
 use crate::resolver::exporttable::incompleteexporttable::{IncompleteExportTable, VisibilityExportHandler};
@@ -48,7 +48,7 @@ impl Resolver {
 
     // resolve private symbols
     pub fn getResolvedAST(self) -> Result<ResolvedAST, Vec<ResolutionError>> {
-        let table = CompleteExportTable::new(&self.privateExportTable, vec![
+        let table = CompleteExportTable::new(self.privateExportTable, vec![
             CORE_EXPORT_TABLE.to_owned(), self.exportTable.getCompleteExportTableBlocking().ok_or_else(|| vec![])?,
         ])?;
         todo!()

@@ -28,10 +28,10 @@ use crate::ast::symbol::looptype::label::Label;
 use crate::ast::symbol::looptype::whileloop::WhileLoop;
 use crate::ast::symbol::returnsym::ReturnSym;
 use crate::ast::tokensource::conflictresolution::{resolveClassDefinitionConflict, resolveSymbolConflict};
-use crate::ast::tokensource::symbolparser::{getLazyMatch, getMappedMatch, getMatchAnyOf, getMatchFrom, getMatchOneOf, getRepeatingMatch, Match, MatchOption, MatchType, OptionalMatch};
+use crate::ast::tokensource::matchtype::{getLazyMatch, getMappedMatch, getMatchAnyOf, getMatchFrom, getMatchOneOf, getRepeatingMatch, Match, MatchOption, MatchType, OptionalMatch};
 use crate::module::{FileRange, Keyword, Module, Operator, ParenthesisType, QuoteType, TokenType, TokenTypeDiscriminants};
 use crate::module::modulepos::{ModulePos, ModuleRange};
-use crate::module::visibility::Visibility;
+use crate::ast::visibility::Visibility;
 
 pub fn getMatchKeyword(keyword: Keyword) -> impl MatchType<Value = ()> {
     return getMatchFrom(format!("{keyword:?}"), move |pos| {

@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::num::NonZeroUsize;
 use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
@@ -42,11 +43,12 @@ impl Compiler {
     pub fn new(threadCount: Option<NonZeroUsize>, sourceVec: Vec<String>) -> Self {
         let exportTable = GlobalExportTable::new();
         let threadCount = threadCount.unwrap_or(std::thread::available_parallelism().unwrap_or(NonZeroUsize::new(4).unwrap()));
+        let threadCount = min(threadCount.into(), sourceVec.len());
         let jobManager = Arc::new(Mutex::new(JobManager::Source(exportTable.to_owned(), sourceVec)));
 
         let mut handleVec = Vec::new();
 
-        for _ in 0..threadCount.into() {
+        for _ in 0..threadCount {
             handleVec.push(CompileJob::new(jobManager.to_owned()));
         }
 
