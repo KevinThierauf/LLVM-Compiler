@@ -6,6 +6,7 @@ use crate::ast::symbol::Symbol;
 pub use crate::ast::tokensource::ASTError;
 use crate::ast::tokensource::parseModule;
 use crate::module::Module;
+use crate::module::modulepos::{ModulePos, ModuleRange};
 
 mod tokensource;
 pub mod symbol;
@@ -84,5 +85,13 @@ impl SymbolPos {
 
     pub fn getSymbol(&self) -> &Symbol {
         return &self.ast.symbolVec[self.index];
+    }
+
+    pub fn getModuleRange(&self) -> &ModuleRange {
+        return self.getSymbol().getSymbolType().getRange();
+    }
+
+    pub fn getModulePos(&self) -> ModulePos {
+        return self.getModuleRange().getStartPos();
     }
 }

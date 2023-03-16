@@ -37,7 +37,7 @@ pub struct ClassDefinitionSym {
     pub fields: Vec<ClassFieldDefinition>,
     pub staticFields: Vec<ClassStaticFieldDefinition>,
     pub methods: Vec<FunctionDefinitionSym>,
-    pub inherited: Vec<ModulePos>,
+    // pub inherited: Vec<ModulePos>,
 }
 
 impl SymbolType for ClassDefinitionSym {

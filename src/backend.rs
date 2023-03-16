@@ -5,7 +5,8 @@ pub struct CompiledModule {
 
 impl CompiledModule {
     pub fn new(resolved: ResolvedAST) -> Self {
-        todo!()
+        // todo
+        return Self::empty();
     }
     
     pub fn empty() -> Self {
@@ -14,6 +15,6 @@ impl CompiledModule {
     }
     
     pub fn merge(&mut self, other: CompiledModule) {
-        todo!()
+        // todo
     }
 }

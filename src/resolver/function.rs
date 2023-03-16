@@ -3,22 +3,47 @@ use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::sync::Arc;
+use crate::ast::visibility::Visibility;
+
+use crate::resolver::typeinfo::Type;
+
+pub struct Parameter {
+    pub ty: Type,
+    pub name: String,
+}
 
 pub struct FunctionImpl {
+    pub name: String,
+    pub returnType: Type,
+    pub visibility: Visibility,
+    pub parameters: Vec<Parameter>,
 }
 
 impl FunctionImpl {
-    pub fn getFunctionName(&self) -> &str {
-        todo!()
+    pub fn getFunctionName(&self) -> &String {
+        return &self.name;
     }
 }
 
 #[derive(Clone)]
-pub struct Function(pub Arc<FunctionImpl>);
+pub struct Function(Arc<FunctionImpl>);
+
+impl Function {
+    pub fn new(name:String, visibility: Visibility, returnType: Type, parameters: Vec<Parameter>) -> Self {
+        return Self {
+            0: Arc::new(FunctionImpl {
+                name,
+                returnType,
+                visibility,
+                parameters,
+            }),
+        };
+    }
+}
 
 impl Debug for Function {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "{}()", self.0.getFunctionName());
+        return write!(f, "{:?} {} {}({})", self.0.visibility, self.returnType.getTypeName(), self.0.getFunctionName(), self.parameters.iter().map(|parameter| format!("{} {}", parameter.ty.getTypeName(), parameter.name)).collect::<Vec<_>>().join(", "));
     }
 }
 

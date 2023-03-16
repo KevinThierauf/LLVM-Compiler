@@ -25,12 +25,12 @@ pub static CORE_EXPORT_TABLE: Lazy<Arc<CompleteExportTable>> = Lazy::new(|| {
     let pos = ast.getPos(0);
 
     // primitive types
-    builder.addExportedType(pos.to_owned(), INTEGER_TYPE.to_owned()).expect("failed to build core table");
-    builder.addExportedType(pos.to_owned(), FLOAT_TYPE.to_owned()).expect("failed to build core table");
-    builder.addExportedType(pos.to_owned(), BOOLEAN_TYPE.to_owned()).expect("failed to build core table");
-    builder.addExportedType(pos.to_owned(), CHARACTER_TYPE.to_owned()).expect("failed to build core table");
-    builder.addExportedType(pos.to_owned(), STRING_TYPE.to_owned()).expect("failed to build core table");
-    builder.addExportedType(pos.to_owned(), VOID_TYPE.to_owned()).expect("failed to build core table");
+    builder.addExportedType(INTEGER_TYPE.to_owned()).expect("failed to build core table");
+    builder.addExportedType(FLOAT_TYPE.to_owned()).expect("failed to build core table");
+    builder.addExportedType(BOOLEAN_TYPE.to_owned()).expect("failed to build core table");
+    builder.addExportedType(CHARACTER_TYPE.to_owned()).expect("failed to build core table");
+    builder.addExportedType(STRING_TYPE.to_owned()).expect("failed to build core table");
+    builder.addExportedType(VOID_TYPE.to_owned()).expect("failed to build core table");
 
     return Arc::new(builder);
 });

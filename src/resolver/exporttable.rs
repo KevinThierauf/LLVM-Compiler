@@ -6,10 +6,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use parking_lot::{Condvar, RawMutex};
 use parking_lot::lock_api::Mutex;
 
-use crate::ast::visibility::Visibility::Public;
 use crate::resolver::exporttable::completeexporttable::CompleteExportTable;
 use crate::resolver::exporttable::completeexporttable::coreexporttable::CORE_EXPORT_TABLE;
-use crate::resolver::exporttable::incompleteexporttable::{IncompleteExportTable, VisibilityExportHandler};
+use crate::resolver::exporttable::incompleteexporttable::IncompleteExportTable;
 use crate::resolver::resolutionerror::ResolutionError;
 
 pub mod completeexporttable;
@@ -58,6 +57,7 @@ impl ExportImpl {
                 ExportTableState::NotifyComplete(incompleteTable) => {
                     let result = match CompleteExportTable::new(incompleteTable, vec![CORE_EXPORT_TABLE.to_owned()]) {
                         Ok(complete) => {
+                            println!("{:#?}", complete);
                             *exportImpl = ExportTableState::Complete(complete);
                             Ok(())
                         }
@@ -69,7 +69,10 @@ impl ExportImpl {
                     self.conditional.notify_all();
                     return result;
                 }
-                ExportTableState::Incomplete(_) => self.conditional.wait(&mut exportImpl),
+                ExportTableState::Incomplete(_) => {
+                    swap(&mut exportState, exportImpl.deref_mut());
+                    self.conditional.wait(&mut exportImpl);
+                },
                 ExportTableState::Complete(_) | ExportTableState::CompleteFailed => panic!("export table has already been set to complete"),
             }
         }
@@ -101,7 +104,7 @@ impl GlobalExportTable {
             exportState: Arc::new(ExportImpl {
                 writers: AtomicUsize::new(1),
                 conditional: Default::default(),
-                table: Mutex::new(ExportTableState::Incomplete(IncompleteExportTable::new(VisibilityExportHandler(Public)))),
+                table: Mutex::new(ExportTableState::Incomplete(IncompleteExportTable::new())),
             }),
         };
     }

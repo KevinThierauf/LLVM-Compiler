@@ -414,7 +414,7 @@ pub fn getMatchClassDefinitionSym() -> impl MatchType<Value = ClassDefinitionSym
                 fields,
                 methods,
                 staticFields,
-                inherited: vec![],
+                // inherited: vec![],
             })
         });
 }

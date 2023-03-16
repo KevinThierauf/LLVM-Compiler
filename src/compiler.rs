@@ -68,7 +68,10 @@ impl Compiler {
         // first step of resolution (identifying export symbols)
         // local exports will be resolved after all global symbols have been resolved
         // global exports will be resolved after all global symbols have been identified
-        return Ok(Resolver::new(ast, exportTable));
+        return match Resolver::new(ast, exportTable) {
+            Ok(resolver) => Ok(resolver),
+            Err(err) => Err(CompilerError::ResolutionError(err))
+        };
     }
 
     fn compileSecondStage(resolver: Resolver) -> Result<CompiledModule, CompilerError> {
