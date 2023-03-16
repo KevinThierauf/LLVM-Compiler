@@ -190,7 +190,7 @@ impl IncompleteExportTable {
 
         let mut classFunctionInfo = HashMap::new();
 
-        while self.classVec.is_empty() {
+        while !self.classVec.is_empty() {
             let mut index = 0;
             let mut errorValue = false;
             while index < self.classVec.len() {
