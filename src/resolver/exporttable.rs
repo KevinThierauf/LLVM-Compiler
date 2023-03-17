@@ -57,7 +57,6 @@ impl ExportImpl {
                 ExportTableState::NotifyComplete(incompleteTable) => {
                     let result = match CompleteExportTable::new(incompleteTable, vec![CORE_EXPORT_TABLE.to_owned()]) {
                         Ok(complete) => {
-                            println!("{:#?}", complete);
                             *exportImpl = ExportTableState::Complete(complete);
                             Ok(())
                         }

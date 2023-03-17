@@ -1,3 +1,11 @@
+pub mod functioncall;
+pub mod ifstatement;
+pub mod resolvedexpr;
+pub mod statement;
+pub mod whilestatement;
+pub mod variabledeclare;
+pub mod returnstatement;
+
 #[derive(Debug)]
 pub struct ResolvedAST {}
 

@@ -53,7 +53,7 @@ impl CompleteExportTable {
         return self.typeFunctionInfo.get(&ty).unwrap_or(EMPTY_FUNCTION_INFO.deref()).to_owned();
     }
 
-    pub fn getExportedType(&self, name: &String) -> Result<Type, ResolutionError> {
+    pub fn getExportedType(&self, name: &str) -> Result<Type, ResolutionError> {
         let mut ty = self.exportTypes.get(name).map(|ty| ty.to_owned());
 
         for table in &self.dependencies {
@@ -68,7 +68,7 @@ impl CompleteExportTable {
         return ty.ok_or(ResolutionError::UnknownType(name.to_owned()));
     }
 
-    pub fn getExportedFunction(&self, name: &String) -> Result<Function, ResolutionError> {
+    pub fn getExportedFunction(&self, name: &str) -> Result<Function, ResolutionError> {
         let mut function = self.exportFunctions.get(name).map(|function| function.to_owned());
 
         for table in &self.dependencies {
