@@ -6,6 +6,7 @@ use crate::ast::AbstractSyntaxTree;
 use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::symbol::expr::Expr;
 use crate::module::modulepos::ModulePos;
+use crate::module::Operator;
 use crate::resolver::exporttable::completeexporttable::CompleteExportTable;
 use crate::resolver::exporttable::GlobalExportTable;
 use crate::resolver::exporttable::incompleteexporttable::IncompleteExportTable;
@@ -14,6 +15,7 @@ use crate::resolver::resolvedast::functioncall::FunctionCall;
 use crate::resolver::resolvedast::ifstatement::IfStatement;
 use crate::resolver::resolvedast::ResolvedAST;
 use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
+use crate::resolver::resolvedast::resolvedoperator::ResolvedOperator;
 use crate::resolver::resolvedast::statement::Statement;
 use crate::resolver::resolvedast::variabledeclare::VariableDeclare;
 use crate::resolver::resolvedast::whilestatement::WhileStatement;
@@ -93,7 +95,7 @@ impl Resolver {
                     Symbol::While(symbol) => {
                         return getResolvedExpression(self.getDynMut(), &exportTable, errorVec, &symbol.condition, |resolver, exportTable, errorVec, expr| {
                             return if expr.getExpressionType() == BOOLEAN_TYPE.to_owned() {
-                                let statement = self.handleSymbol(exportTable, errorVec, symbol.symbol.deref())?;
+                                let statement = resolver.handleSymbol(exportTable, errorVec, symbol.symbol.deref())?;
                                 Some(Statement::While(Box::new(WhileStatement {
                                     condition: expr,
                                     statement,
@@ -101,13 +103,13 @@ impl Resolver {
                             } else {
                                 errorVec.push(ResolutionError::ExpectedType(BOOLEAN_TYPE.to_owned(), expr.getExpressionType()));
                                 None
-                            }
+                            };
                         });
                     }
                     Symbol::IfSym(symbol) => {
                         return getResolvedExpression(self.getDynMut(), &exportTable, errorVec, &symbol.condition, |resolver, exportTable, errorVec, expr| {
                             return if expr.getExpressionType() == BOOLEAN_TYPE.to_owned() {
-                                let statement = self.handleSymbol(exportTable, errorVec, symbol.symbol.deref())?;
+                                let statement = resolver.handleSymbol(exportTable, errorVec, symbol.symbol.deref())?;
                                 Some(Statement::If(Box::new(IfStatement {
                                     condition: expr,
                                     statement,
@@ -115,7 +117,7 @@ impl Resolver {
                             } else {
                                 errorVec.push(ResolutionError::ExpectedType(BOOLEAN_TYPE.to_owned(), expr.getExpressionType()));
                                 None
-                            }
+                            };
                         });
                     }
                     Symbol::FunctionCall(symbol) => {
@@ -140,7 +142,7 @@ impl Resolver {
                                         }))))
                                     } else {
                                         None
-                                    }
+                                    };
                                 } else {
                                     errorVec.push(ResolutionError::ParameterMismatch(function.to_owned(), format!("parameter mismatch: expected {} args, found {}", function.parameters.len(), symbol.argVec.len())));
                                     None
@@ -149,12 +151,60 @@ impl Resolver {
                             Err(error) => {
                                 errorVec.push(error);
                                 None
-                            },
+                            }
                         }
                     }
                     Symbol::Operator(symbol) => {
-                        // todo - top level operator with a variable declaration should also be a static variable declaration
-                        todo!()
+                        let mut exprVec: Vec<ResolvedExpr> = Vec::new();
+                        for expr in symbol.operands.deref() {
+                            let s = getResolvedExpression(self.getDynMut(), exportTable, errorVec, expr, |resolver, exportTable, errorVec, resolved| {
+                                if let Some(last) = exprVec.last() {
+                                    if last.getExpressionType() != resolved.getExpressionType() {
+                                        errorVec.push(ResolutionError::ExpectedType(last.getExpressionType(), resolved.getExpressionType()));
+                                        return false;
+                                    }
+                                }
+                                exprVec.push(resolved);
+                                return true;
+                            });
+                            if !s {
+                                return None;
+                            }
+                        }
+
+                        let exprType = exprVec.last().unwrap().getExpressionType();
+
+                        match symbol.operator {
+                            Operator::Increment | Operator::Decrement => {}
+                            Operator::Not => {}
+                            Operator::Dot => {}
+                            Operator::Range | Operator::Ellipsis | Operator::Colon | Operator::ErrorPropagation => {}
+                            Operator::Cast => {}
+                            Operator::Plus => {}
+                            Operator::Minus => {}
+                            Operator::Mult => {}
+                            Operator::Div => {}
+                            Operator::Mod => {}
+                            Operator::PlusAssign => {}
+                            Operator::MinusAssign => {}
+                            Operator::MultAssign => {}
+                            Operator::DivAssign => {}
+                            Operator::ModAssign => {}
+                            Operator::And => {}
+                            Operator::Or => {}
+                            Operator::Greater => {}
+                            Operator::Less => {}
+                            Operator::GreaterEq => {}
+                            Operator::LessEq => {}
+                            Operator::CompareEq => {}
+                            Operator::CompareNotEq => {}
+                            Operator::AssignEq => {}
+                        }
+
+                        return Some(Statement::Expr(ResolvedExpr::Operator(Box::new(ResolvedOperator {
+                            operator: symbol.operator,
+                            operands: exprVec.into_boxed_slice(),
+                        }))));
                     }
                     Symbol::VariableDeclaration(symbol) => {
                         return if let Some(explicitType) = &symbol.explicitType {
@@ -162,7 +212,7 @@ impl Resolver {
                         } else {
                             errorVec.push(ResolutionError::UnresolvedType(symbol.range.getStartPos(), format!("unable to determine type for variable {}", symbol.variableName.getToken().getSourceRange().getSourceInRange())));
                             None
-                        }
+                        };
                     }
                     Symbol::ClassDefinition(symbol) => {
                         errorVec.push(ResolutionError::Unexpected(symbol.getRange().getStartPos(), "unexpected class definition".to_owned()));

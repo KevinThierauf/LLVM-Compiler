@@ -1,5 +1,6 @@
 use std::ops::Deref;
 use crate::resolver::resolvedast::functioncall::FunctionCall;
+use crate::resolver::resolvedast::resolvedoperator::ResolvedOperator;
 use crate::resolver::resolvedast::statement::StatementType;
 use crate::resolver::resolvedast::variabledeclare::VariableDeclare;
 use crate::resolver::typeinfo::Type;
@@ -9,6 +10,7 @@ pub trait ResolvedExprType: StatementType {
 }
 
 pub enum ResolvedExpr {
+    Operator(Box<ResolvedOperator>),
     FunctionCall(Box<FunctionCall>),
     VariableDeclaration(VariableDeclare),
 }
@@ -16,6 +18,7 @@ pub enum ResolvedExpr {
 impl ResolvedExpr {
     pub fn getResolvedExprType(&self) -> &dyn ResolvedExprType {
         return match self {
+            ResolvedExpr::Operator(v) => v.deref(),
             ResolvedExpr::FunctionCall(v) => v.deref(),
             ResolvedExpr::VariableDeclaration(v) => v,
         };
