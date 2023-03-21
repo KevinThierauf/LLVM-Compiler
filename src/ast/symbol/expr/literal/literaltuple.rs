@@ -1,6 +1,6 @@
-use crate::ast::symbol::SymbolType;
 use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::expr::literal::LiteralType;
+use crate::ast::symbol::SymbolType;
 use crate::module::modulepos::ModuleRange;
 use crate::resolver::typeinfo::Type;
 

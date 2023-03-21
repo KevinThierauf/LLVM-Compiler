@@ -10,8 +10,7 @@ pub struct ResolvedOperator {
     pub expressionType: Type,
 }
 
-impl StatementType for ResolvedOperator {
-}
+impl StatementType for ResolvedOperator {}
 
 impl ResolvedExprType for ResolvedOperator {
     fn getExpressionType(&self) -> Type {

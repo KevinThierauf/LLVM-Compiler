@@ -71,7 +71,7 @@ impl ExportImpl {
                 ExportTableState::Incomplete(_) => {
                     swap(&mut exportState, exportImpl.deref_mut());
                     self.conditional.wait(&mut exportImpl);
-                },
+                }
                 ExportTableState::Complete(_) | ExportTableState::CompleteFailed => panic!("export table has already been set to complete"),
             }
         }

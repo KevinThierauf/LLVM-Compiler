@@ -1,4 +1,6 @@
-structure.function()
+let structure = new Structure();
+
+structure.method()
 // 0..1
 
 //import test
@@ -23,7 +25,7 @@ while var < 10 {
     }
 }
 
-class Something {
+class Structure {
     int a
     int b
     int c

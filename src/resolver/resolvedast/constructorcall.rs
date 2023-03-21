@@ -3,18 +3,14 @@ use crate::resolver::resolvedast::statement::StatementType;
 use crate::resolver::typeinfo::Type;
 
 #[derive(Debug)]
-pub struct VariableDeclare {
+pub struct ConstructorCall {
     pub ty: Type,
 }
 
-impl StatementType for VariableDeclare {}
+impl StatementType for ConstructorCall {}
 
-impl ResolvedExprType for VariableDeclare {
+impl ResolvedExprType for ConstructorCall {
     fn getExpressionType(&self) -> Type {
         return self.ty.to_owned();
-    }
-
-    fn isAssignable(&self) -> bool {
-        return true;
     }
 }

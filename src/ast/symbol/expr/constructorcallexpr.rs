@@ -3,19 +3,19 @@ use crate::ast::symbol::SymbolType;
 use crate::module::modulepos::{ModulePos, ModuleRange};
 
 #[derive(Debug)]
-pub struct FunctionCallExpr {
+pub struct ConstructorCallExpr {
     pub range: ModuleRange,
-    pub functionName: ModulePos,
+    pub typeName: ModulePos,
     pub argVec: Vec<Expr>,
 }
 
-impl SymbolType for FunctionCallExpr {
+impl SymbolType for ConstructorCallExpr {
     fn getRange(&self) -> &ModuleRange {
         return &self.range;
     }
 }
 
-impl ExprType for FunctionCallExpr {
+impl ExprType for ConstructorCallExpr {
     fn getSymbolType(&self) -> &dyn SymbolType {
         return self;
     }

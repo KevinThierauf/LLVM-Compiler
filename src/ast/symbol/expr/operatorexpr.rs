@@ -2,8 +2,8 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 
 use crate::ast::ASTError;
-use crate::ast::symbol::SymbolType;
 use crate::ast::symbol::expr::{Expr, ExprType};
+use crate::ast::symbol::SymbolType;
 use crate::module::modulepos::ModuleRange;
 use crate::module::Operator;
 

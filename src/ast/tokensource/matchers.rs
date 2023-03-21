@@ -32,6 +32,7 @@ use crate::ast::tokensource::matchtype::{getLazyMatch, getMappedMatch, getMatchA
 use crate::ast::visibility::Visibility;
 use crate::module::{FileRange, Keyword, Module, Operator, ParenthesisType, QuoteType, TokenType, TokenTypeDiscriminants};
 use crate::module::modulepos::{ModulePos, ModuleRange};
+use crate::ast::symbol::expr::constructorcallexpr::ConstructorCallExpr;
 
 pub fn getMatchKeyword(keyword: Keyword) -> impl MatchType<Value = ()> {
     return getMatchFrom(format!("{keyword:?}"), move |pos| {
@@ -170,6 +171,7 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
         MatchOption::new(getMatchWhileSym(), |_, v| Ok(Symbol::While(v))),
         MatchOption::new(getMatchReturnSym(), |_, v| Ok(Symbol::Return(v))),
         MatchOption::new(getMatchImportSym(), |_, v| Ok(Symbol::ImportSym(v))),
+        MatchOption::new(getMatchConstructorCallExpr(), |_, v| Ok(Symbol::Expr(Expr::ConstructorCall(v)))),
         MatchOption::new(getMatchFunctionCallExpr(), |_, v| Ok(Symbol::Expr(Expr::FunctionCall(v)))),
         MatchOption::new(getMatchOperatorExpr(), |_, v| Ok(Symbol::Expr(Expr::Operator(v)))),
         MatchOption::new(getMatchVariableDeclarationExpr(), |_, v| Ok(Symbol::Expr(Expr::VariableDeclaration(v)))),
@@ -199,6 +201,7 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
 
 pub fn getMatchExcludingExpr(excludeOperator: bool, excludeDeclaration: bool) -> impl MatchType<Value = Expr> {
     return getMatchAnyOf(&[
+        MatchOption::new(getMatchConstructorCallExpr(), |_, v| Ok(Expr::ConstructorCall(v))),
         MatchOption::new(getMatchFunctionCallExpr(), |_, v| Ok(Expr::FunctionCall(v))),
         if !excludeOperator {
             MatchOption::new(getMatchOperatorExpr(), |_, v| Ok(Expr::Operator(v)))
@@ -572,6 +575,21 @@ pub fn getMatchImportSym() -> impl MatchType<Value = ImportSym> {
             packageName,
             localName,
         }));
+}
+
+pub fn getMatchConstructorCallExpr() -> impl MatchType<Value = ConstructorCallExpr> {
+    // new Type(args)
+    return getMappedMatch(
+        (
+            getMatchKeyword(Keyword::New),
+            getMatchType(), // name
+            getMatchParenthesis(ParenthesisType::Rounded, |module| getMatchExprCommaList().getMatch(module.getModulePos(0))),
+        ), |range, (_, typeName, argVec)| Ok(ConstructorCallExpr {
+            range,
+            typeName,
+            argVec: argVec.take().1,
+        }),
+    );
 }
 
 pub fn getMatchFunctionCallExpr() -> impl MatchType<Value = FunctionCallExpr> {

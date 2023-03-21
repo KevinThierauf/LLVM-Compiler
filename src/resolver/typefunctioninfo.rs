@@ -13,7 +13,7 @@ impl TypeFunctionInfo {
     pub fn new() -> Self {
         return Self {
             functionVec: HashMap::new(),
-        }
+        };
     }
 
     pub fn addFunction(&mut self, function: Function) -> Result<(), ResolutionError> {

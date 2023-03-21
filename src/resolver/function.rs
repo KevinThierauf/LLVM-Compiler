@@ -29,7 +29,7 @@ impl FunctionImpl {
 pub struct Function(Arc<FunctionImpl>);
 
 impl Function {
-    pub fn new(name:String, visibility: Visibility, returnType: Type, parameters: Vec<Parameter>) -> Self {
+    pub fn new(name: String, visibility: Visibility, returnType: Type, parameters: Vec<Parameter>) -> Self {
         return Self {
             0: Arc::new(FunctionImpl {
                 name,

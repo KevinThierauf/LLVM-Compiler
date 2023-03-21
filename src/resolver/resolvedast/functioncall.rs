@@ -9,8 +9,7 @@ pub struct FunctionCall {
     pub argVec: Vec<ResolvedExpr>,
 }
 
-impl StatementType for FunctionCall {
-}
+impl StatementType for FunctionCall {}
 
 impl ResolvedExprType for FunctionCall {
     fn getExpressionType(&self) -> Type {

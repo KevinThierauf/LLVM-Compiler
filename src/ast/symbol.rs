@@ -70,6 +70,7 @@ pub enum SymbolDiscriminants {
     LiteralString,
     LiteralVoid,
     LiteralTuple,
+    ConstructorCall,
 }
 
 impl<'a> From<&'a Symbol> for SymbolDiscriminants {
@@ -98,6 +99,7 @@ impl<'a> From<&'a Symbol> for SymbolDiscriminants {
                     Expr::LiteralString(_) => SymbolDiscriminants::LiteralString,
                     Expr::LiteralVoid(_) => SymbolDiscriminants::LiteralVoid,
                     Expr::LiteralTuple(_) => SymbolDiscriminants::LiteralTuple,
+                    Expr::ConstructorCall(_) => SymbolDiscriminants::ConstructorCall,
                 }
             }
         };
@@ -127,7 +129,7 @@ impl Symbol {
             Some(expr.getExprType())
         } else {
             None
-        }
+        };
     }
 
     pub fn toExpression(self) -> Option<Expr> {
@@ -135,6 +137,6 @@ impl Symbol {
             Some(expr)
         } else {
             None
-        }
+        };
     }
 }

@@ -1,10 +1,10 @@
 use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 use crate::resolver::resolvedast::statement::{Statement, StatementType};
 
+#[derive(Debug)]
 pub struct IfStatement {
     pub condition: ResolvedExpr,
-    pub statement: Statement
+    pub statement: Statement,
 }
 
-impl StatementType for IfStatement {
-}
+impl StatementType for IfStatement {}

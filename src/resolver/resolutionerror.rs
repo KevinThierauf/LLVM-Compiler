@@ -15,9 +15,11 @@ pub enum ResolutionError {
     InvalidOperationType(Type, String),
     ExpectedType(Type, Type, String),
     UnknownType(String),
+    UnknownVariable(String),
     UnknownFunction(String),
     UnresolvedType(ModulePos, String),
     ParameterMismatch(Function, String),
+    ConflictingVariable(String, String),
     // conflicting field name (type name, field name)
     ConflictingFields(String, String),
     ConflictingType(Type, Type),

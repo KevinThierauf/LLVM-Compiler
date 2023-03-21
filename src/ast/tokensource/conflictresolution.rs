@@ -104,9 +104,9 @@ impl<'a, S: Debug, SD: Copy + Eq + for<'b> From<&'b S>> ConflictResolver<'a, S, 
 
 pub fn resolveClassDefinitionConflict<'a>(pos: ModulePos, options: impl Iterator<Item = &'a Match<ClassMember>>) -> Result<usize, ASTError> {
     let mut resolver = ConflictResolver::new(pos, options.collect());
-    
+
     resolver.setPreferred(ClassMemberDiscriminants::FunctionDefinition, ClassMemberDiscriminants::FieldDefinition);
-    
+
     return resolver.getResolved();
 }
 

@@ -8,6 +8,6 @@ pub static STRING_TYPE: Lazy<Type> = Lazy::new(|| {
     let mut classType = ClassTypeInfo::newBuilder("String", Visibility::Public);
     
     // todo
-    
+
     classType.build()
 });

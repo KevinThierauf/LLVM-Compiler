@@ -218,6 +218,7 @@ impl Operator {
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Keyword {
     // structure
+    New,
     Class,
     Static,
     Extends,

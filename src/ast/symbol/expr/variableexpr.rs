@@ -1,5 +1,5 @@
-use crate::ast::symbol::SymbolType;
 use crate::ast::symbol::expr::ExprType;
+use crate::ast::symbol::SymbolType;
 use crate::module::modulepos::ModuleRange;
 
 #[derive(Debug)]

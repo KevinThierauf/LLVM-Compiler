@@ -30,7 +30,7 @@ impl CompilerError {
             CompilerError::TokenParseError(error) => format!("Failed to parse tokens: {}", error.getDisplayMessage()),
             CompilerError::ASTParseError(error) => format!("Failed to match syntax: {}", error.getDisplayMessage()),
             CompilerError::ResolutionError(error) => format!("Failed to resolve symbols: {error:?}"),
-        }
+        };
     }
 }
 
@@ -55,7 +55,7 @@ impl Compiler {
         return Self {
             exportTable,
             threads: handleVec,
-        }
+        };
     }
 
     fn compileFirstStage(exportTable: GlobalExportTable, source: String) -> Result<Resolver, CompilerError> {
@@ -155,10 +155,6 @@ impl CompileJob {
     }
 
     fn getCompiledResult(mut self) -> Option<CompiledModule> {
-        if self.error {
-            return None;
-        }
-
         let mut resolverVec = Vec::new();
         resolverVec.append(&mut self.resolverVec);
 
@@ -169,6 +165,10 @@ impl CompileJob {
             });
         }
 
-        return Some(compiledModule);
+        return if self.error {
+            None
+        } else {
+            Some(compiledModule)
+        };
     }
 }

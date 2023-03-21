@@ -26,7 +26,7 @@ impl ClassTypeInfo {
             visibility,
             fieldVec: Vec::new(),
             explicitConversions: Vec::new(),
-        }
+        };
     }
 
     pub fn addField(&mut self, field: ClassField) -> Result<(), ResolutionError> {

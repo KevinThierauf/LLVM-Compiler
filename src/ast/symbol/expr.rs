@@ -14,12 +14,14 @@ use crate::ast::symbol::expr::operatorexpr::OperatorExpr;
 use crate::ast::symbol::expr::variabledeclaration::VariableDeclarationExpr;
 use crate::ast::symbol::expr::variableexpr::VariableExpr;
 use crate::module::modulepos::ModuleRange;
+use constructorcallexpr::ConstructorCallExpr;
 
 pub mod operatorexpr;
 pub mod functioncall;
 pub mod variableexpr;
 pub mod literal;
 pub mod variabledeclaration;
+pub mod constructorcallexpr;
 
 pub trait ExprType: 'static + SymbolType + Debug {
     fn getSymbolType(&self) -> &dyn SymbolType;
@@ -31,6 +33,7 @@ pub enum Expr {
     Operator(OperatorExpr),
     VariableDeclaration(VariableDeclarationExpr),
     Variable(VariableExpr),
+    ConstructorCall(ConstructorCallExpr),
     LiteralArray(LiteralArray),
     LiteralBool(LiteralBool),
     LiteralChar(LiteralChar),
@@ -64,6 +67,7 @@ impl Expr {
             Expr::LiteralString(v) => v,
             Expr::LiteralVoid(v) => v,
             Expr::LiteralTuple(v) => v,
-        }
+            Expr::ConstructorCall(v) => v,
+        };
     }
 }

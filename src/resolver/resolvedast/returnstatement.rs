@@ -1,7 +1,6 @@
 use crate::resolver::resolvedast::statement::StatementType;
 
-pub struct ReturnStatement {
-}
+#[derive(Debug)]
+pub struct ReturnStatement {}
 
-impl StatementType for ReturnStatement {
-}
+impl StatementType for ReturnStatement {}

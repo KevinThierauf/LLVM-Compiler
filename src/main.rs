@@ -23,6 +23,8 @@ fn main() {
 
         // todo - handle compiled module
     } else {
-        exit(-1);
+        let end = SystemTime::now();
+        println!("Compilation failed in {}ms", end.duration_since(start).unwrap().as_millis());
+        exit(1);
     }
 }
