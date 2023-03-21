@@ -1,4 +1,4 @@
-use crate::ast::symbol::{Symbol, SymbolType};
+use crate::ast::symbol::SymbolType;
 use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::module::modulepos::{ModulePos, ModuleRange};
 
@@ -16,7 +16,7 @@ impl SymbolType for FunctionCallExpr {
 }
 
 impl ExprType for FunctionCallExpr {
-    fn toSymbol(self: Box<Self>) -> Symbol {
-        return Symbol::FunctionCall(*self);
+    fn getSymbolType(&self) -> &dyn SymbolType {
+        return self;
     }
 }

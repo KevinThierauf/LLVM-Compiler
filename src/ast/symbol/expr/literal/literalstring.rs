@@ -1,4 +1,4 @@
-use crate::ast::symbol::{Symbol, SymbolType};
+use crate::ast::symbol::SymbolType;
 use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::module::FileRange;
@@ -13,8 +13,8 @@ pub struct LiteralString {
 }
 
 impl ExprType for LiteralString {
-    fn toSymbol(self: Box<Self>) -> Symbol {
-        return Symbol::LiteralString(*self);
+    fn getSymbolType(&self) -> &dyn SymbolType {
+        return self;
     }
 }
 

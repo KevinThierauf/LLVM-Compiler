@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Formatter};
 
-use crate::ast::symbol::{Symbol, SymbolType};
+use crate::ast::symbol::SymbolType;
 use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::module::modulepos::ModuleRange;
@@ -18,8 +18,8 @@ impl Debug for LiteralArray {
 }
 
 impl ExprType for LiteralArray {
-    fn toSymbol(self: Box<Self>) -> Symbol {
-        return Symbol::LiteralArray(*self);
+    fn getSymbolType(&self) -> &dyn SymbolType {
+        return self;
     }
 }
 

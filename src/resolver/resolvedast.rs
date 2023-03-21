@@ -6,6 +6,7 @@ pub mod whilestatement;
 pub mod variabledeclare;
 pub mod returnstatement;
 pub mod resolvedoperator;
+pub mod resolvedvariable;
 
 #[derive(Debug)]
 pub struct ResolvedAST {}

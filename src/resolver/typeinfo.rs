@@ -15,7 +15,11 @@ pub mod string;
 pub trait TypeInfo: Sync + Send {
     fn getTypeName(&self) -> &str;
     fn getStaticSize(&self) -> u32;
-    fn getImplicitConversions(&self) -> &Vec<Type>;
+    fn getExplicitConversions(&self) -> &Vec<Type>;
+
+    fn isArithmeticType(&self) -> bool {
+        return false;
+    }
 }
 
 #[derive(Clone)]

@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 
 use crate::ast::ASTError;
-use crate::ast::symbol::{Symbol, SymbolType};
+use crate::ast::symbol::SymbolType;
 use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::module::modulepos::ModuleRange;
 use crate::module::Operator;
@@ -39,14 +39,16 @@ impl OperatorExpr {
                         operands: operands.into_boxed_slice(),
                         operator,
                     };
-                    operandStack.push(Box::new(expression));
+                    operandStack.push(Expr::Operator(expression));
                 }
             }
         }
 
         debug_assert_eq!(1, operandStack.len());
-        let expr: OperatorExpr = *operandStack.remove(0).downcast().map_err(|expr| ASTError::MatchFailed(expr.getRange().getEndPos().to_owned()))?;
-        return Ok(expr);
+        return match operandStack.remove(0) {
+            Expr::Operator(v) => Ok(v),
+            expr => Err(ASTError::MatchFailed(expr.getRange().getEndPos().to_owned())),
+        };
     }
 
     fn getValidComponents(mut components: Vec<OperationComponent>) -> Result<Vec<OperationComponent>, ASTError> {
@@ -177,8 +179,8 @@ impl SymbolType for OperatorExpr {
 }
 
 impl ExprType for OperatorExpr {
-    fn toSymbol(self: Box<Self>) -> Symbol {
-        return Symbol::Operator(*self);
+    fn getSymbolType(&self) -> &dyn SymbolType {
+        return self;
     }
 }
 
@@ -227,7 +229,7 @@ mod test {
     }
 
     fn getExpr(index: usize) -> Expr {
-        return Box::new(LiteralInteger {
+        return Expr::LiteralInteger(LiteralInteger {
             value: index as i64,
             range: getPosIndex(index).getRangeWithLength(0),
         });
@@ -300,7 +302,7 @@ mod test {
         ]);
 
         let expected = OperatorExpr::binaryExpr(
-            Box::new(OperatorExpr::binaryExpr(getExpr(1), Operator::Plus, getExpr(3))),
+            Expr::Operator(OperatorExpr::binaryExpr(getExpr(1), Operator::Plus, getExpr(3))),
             Operator::Plus,
             getExpr(5),
         );
@@ -320,7 +322,7 @@ mod test {
         ]);
 
         let expected = OperatorExpr::binaryExpr(
-            Box::new(OperatorExpr::binaryExpr(getExpr(0), Operator::Div, getExpr(2))),
+            Expr::Operator(OperatorExpr::binaryExpr(getExpr(0), Operator::Div, getExpr(2))),
             Operator::Plus,
             getExpr(4),
         );
@@ -343,7 +345,7 @@ mod test {
         let expected = OperatorExpr::binaryExpr(
             getExpr(0),
             Operator::Plus,
-            Box::new(OperatorExpr::binaryExpr(getExpr(2), Operator::Div, getExpr(4))),
+            Expr::Operator(OperatorExpr::binaryExpr(getExpr(2), Operator::Div, getExpr(4))),
         );
 
         checkEq(expected, expr);
@@ -374,7 +376,7 @@ mod test {
         ]);
 
         let expected = OperatorExpr::binaryExpr(
-            Box::new(OperatorExpr::unaryOperator(getExpr(0), Operator::Increment, getPosIndex(1).getRangeWithLength(1))),
+            Expr::Operator(OperatorExpr::unaryOperator(getExpr(0), Operator::Increment, getPosIndex(1).getRangeWithLength(1))),
             Operator::Div,
             getExpr(3),
         );
@@ -398,8 +400,8 @@ mod test {
         let expected = OperatorExpr::binaryExpr(
             getExpr(0),
             Operator::Plus,
-            Box::new(OperatorExpr::binaryExpr(
-                Box::new(OperatorExpr::unaryOperator(getExpr(2), Operator::Increment, getPosIndex(3).getRangeWithLength(1))),
+            Expr::Operator(OperatorExpr::binaryExpr(
+                Expr::Operator(OperatorExpr::unaryOperator(getExpr(2), Operator::Increment, getPosIndex(3).getRangeWithLength(1))),
                 Operator::Div,
                 getExpr(5),
             )),

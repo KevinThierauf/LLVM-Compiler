@@ -1,4 +1,4 @@
-use crate::ast::symbol::{Symbol, SymbolType};
+use crate::ast::symbol::SymbolType;
 use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::module::modulepos::ModuleRange;
@@ -11,8 +11,8 @@ pub struct LiteralTuple {
 }
 
 impl ExprType for LiteralTuple {
-    fn toSymbol(self: Box<Self>) -> Symbol {
-        return Symbol::LiteralTuple(*self);
+    fn getSymbolType(&self) -> &dyn SymbolType {
+        return self;
     }
 }
 

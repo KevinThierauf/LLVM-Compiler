@@ -1,7 +1,7 @@
+use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::looptype::label::Label;
 use crate::ast::symbol::looptype::LoopType;
-use crate::ast::symbol::{Symbol, SymbolType};
 use crate::module::modulepos::ModuleRange;
 
 #[derive(Debug)]

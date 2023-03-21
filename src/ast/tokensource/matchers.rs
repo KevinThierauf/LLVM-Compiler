@@ -29,9 +29,9 @@ use crate::ast::symbol::looptype::whileloop::WhileLoop;
 use crate::ast::symbol::returnsym::ReturnSym;
 use crate::ast::tokensource::conflictresolution::{resolveClassDefinitionConflict, resolveSymbolConflict};
 use crate::ast::tokensource::matchtype::{getLazyMatch, getMappedMatch, getMatchAnyOf, getMatchFrom, getMatchOneOf, getRepeatingMatch, Match, MatchOption, MatchType, OptionalMatch};
+use crate::ast::visibility::Visibility;
 use crate::module::{FileRange, Keyword, Module, Operator, ParenthesisType, QuoteType, TokenType, TokenTypeDiscriminants};
 use crate::module::modulepos::{ModulePos, ModuleRange};
-use crate::ast::visibility::Visibility;
 
 pub fn getMatchKeyword(keyword: Keyword) -> impl MatchType<Value = ()> {
     return getMatchFrom(format!("{keyword:?}"), move |pos| {
@@ -170,24 +170,24 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
         MatchOption::new(getMatchWhileSym(), |_, v| Ok(Symbol::While(v))),
         MatchOption::new(getMatchReturnSym(), |_, v| Ok(Symbol::Return(v))),
         MatchOption::new(getMatchImportSym(), |_, v| Ok(Symbol::ImportSym(v))),
-        MatchOption::new(getMatchFunctionCallExpr(), |_, v| Ok(Symbol::FunctionCall(v))),
-        MatchOption::new(getMatchOperatorExpr(), |_, v| Ok(Symbol::Operator(v))),
-        MatchOption::new(getMatchVariableDeclarationExpr(), |_, v| Ok(Symbol::VariableDeclaration(v))),
-        MatchOption::new(getMatchVariableExpr(), |_, v| Ok(Symbol::Variable(v))),
-        MatchOption::new(getMatchLiteralArray(), |_, v| Ok(Symbol::LiteralArray(v))),
-        MatchOption::new(getMatchLiteralBool(), |_, v| Ok(Symbol::LiteralBool(v))),
-        MatchOption::new(getMatchLiteralChar(), |_, v| Ok(Symbol::LiteralChar(v))),
-        MatchOption::new(getMatchLiteralFloat(), |_, v| Ok(Symbol::LiteralFloat(v))),
-        MatchOption::new(getMatchLiteralInteger(), |_, v| Ok(Symbol::LiteralInteger(v))),
-        MatchOption::new(getMatchLiteralString(), |_, v| Ok(Symbol::LiteralString(v))),
-        MatchOption::new(getMatchLiteralVoid(), |_, v| Ok(Symbol::LiteralVoid(v))),
-        MatchOption::new(getMatchLiteralTuple(), |_, v| Ok(Symbol::LiteralTuple(v))),
+        MatchOption::new(getMatchFunctionCallExpr(), |_, v| Ok(Symbol::Expr(Expr::FunctionCall(v)))),
+        MatchOption::new(getMatchOperatorExpr(), |_, v| Ok(Symbol::Expr(Expr::Operator(v)))),
+        MatchOption::new(getMatchVariableDeclarationExpr(), |_, v| Ok(Symbol::Expr(Expr::VariableDeclaration(v)))),
+        MatchOption::new(getMatchVariableExpr(), |_, v| Ok(Symbol::Expr(Expr::Variable(v)))),
+        MatchOption::new(getMatchLiteralArray(), |_, v| Ok(Symbol::Expr(Expr::LiteralArray(v)))),
+        MatchOption::new(getMatchLiteralBool(), |_, v| Ok(Symbol::Expr(Expr::LiteralBool(v)))),
+        MatchOption::new(getMatchLiteralChar(), |_, v| Ok(Symbol::Expr(Expr::LiteralChar(v)))),
+        MatchOption::new(getMatchLiteralFloat(), |_, v| Ok(Symbol::Expr(Expr::LiteralFloat(v)))),
+        MatchOption::new(getMatchLiteralInteger(), |_, v| Ok(Symbol::Expr(Expr::LiteralInteger(v)))),
+        MatchOption::new(getMatchLiteralString(), |_, v| Ok(Symbol::Expr(Expr::LiteralString(v)))),
+        MatchOption::new(getMatchLiteralVoid(), |_, v| Ok(Symbol::Expr(Expr::LiteralVoid(v)))),
+        MatchOption::new(getMatchLiteralTuple(), |_, v| Ok(Symbol::Expr(Expr::LiteralTuple(v)))),
     ], |pos, mut matchVec, errVec| {
         return if matchVec.is_empty() {
             Err(ASTError::MatchOptionsFailed(pos, errVec))
         } else {
             let index = resolveSymbolConflict(pos, matchVec.iter_mut().map(|symbolMatch| {
-                if let Symbol::Operator(expr) = symbolMatch.getValue() {
+                if let Symbol::Expr(Expr::Operator(expr)) = symbolMatch.getValue() {
                     symbolMatch.range = expr.getRange().to_owned();
                 }
                 &*symbolMatch
@@ -199,26 +199,26 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
 
 pub fn getMatchExcludingExpr(excludeOperator: bool, excludeDeclaration: bool) -> impl MatchType<Value = Expr> {
     return getMatchAnyOf(&[
-        MatchOption::new(getMatchFunctionCallExpr(), |_, v| Ok(Box::new(v) as Expr)),
+        MatchOption::new(getMatchFunctionCallExpr(), |_, v| Ok(Expr::FunctionCall(v))),
         if !excludeOperator {
-            MatchOption::new(getMatchOperatorExpr(), |_, v| Ok(Box::new(v) as Expr))
+            MatchOption::new(getMatchOperatorExpr(), |_, v| Ok(Expr::Operator(v)))
         } else {
             MatchOption::new(getMatchFrom(format!("NOP"), |pos| Err(ASTError::MatchFailed(pos))), |pos, _: u8| Err(ASTError::MatchFailed(pos.getStartPos())))
         },
         if !excludeDeclaration {
-            MatchOption::new(getMatchVariableDeclarationExpr(), |_, v| Ok(Box::new(v) as Expr))
+            MatchOption::new(getMatchVariableDeclarationExpr(), |_, v| Ok(Expr::VariableDeclaration(v)))
         } else {
             MatchOption::new(getMatchFrom(format!("NOP"), |pos| Err(ASTError::MatchFailed(pos))), |pos, _: u8| Err(ASTError::MatchFailed(pos.getStartPos())))
         },
-        MatchOption::new(getMatchVariableExpr(), |_, v| Ok(Box::new(v) as Expr)),
-        MatchOption::new(getMatchLiteralArray(), |_, v| Ok(Box::new(v) as Expr)),
-        MatchOption::new(getMatchLiteralBool(), |_, v| Ok(Box::new(v) as Expr)),
-        MatchOption::new(getMatchLiteralChar(), |_, v| Ok(Box::new(v) as Expr)),
-        MatchOption::new(getMatchLiteralFloat(), |_, v| Ok(Box::new(v) as Expr)),
-        MatchOption::new(getMatchLiteralInteger(), |_, v| Ok(Box::new(v) as Expr)),
-        MatchOption::new(getMatchLiteralString(), |_, v| Ok(Box::new(v) as Expr)),
-        MatchOption::new(getMatchLiteralVoid(), |_, v| Ok(Box::new(v) as Expr)),
-        MatchOption::new(getMatchLiteralTuple(), |_, v| Ok(Box::new(v) as Expr)),
+        MatchOption::new(getMatchVariableExpr(), |_, v| Ok(Expr::Variable(v))),
+        MatchOption::new(getMatchLiteralArray(), |_, v| Ok(Expr::LiteralArray(v))),
+        MatchOption::new(getMatchLiteralBool(), |_, v| Ok(Expr::LiteralBool(v))),
+        MatchOption::new(getMatchLiteralChar(), |_, v| Ok(Expr::LiteralChar(v))),
+        MatchOption::new(getMatchLiteralFloat(), |_, v| Ok(Expr::LiteralFloat(v))),
+        MatchOption::new(getMatchLiteralInteger(), |_, v| Ok(Expr::LiteralInteger(v))),
+        MatchOption::new(getMatchLiteralString(), |_, v| Ok(Expr::LiteralString(v))),
+        MatchOption::new(getMatchLiteralVoid(), |_, v| Ok(Expr::LiteralVoid(v))),
+        MatchOption::new(getMatchLiteralTuple(), |_, v| Ok(Expr::LiteralTuple(v))),
     ], |pos, options, err| {
         return if options.is_empty() {
             Err(ASTError::MatchOptionsFailed(pos, err))

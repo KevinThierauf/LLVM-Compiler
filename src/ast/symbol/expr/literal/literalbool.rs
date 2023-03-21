@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Formatter};
 
-use crate::ast::symbol::{Symbol, SymbolType};
+use crate::ast::symbol::SymbolType;
 use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::module::modulepos::ModuleRange;
@@ -34,8 +34,8 @@ impl SymbolType for LiteralBool {
 }
 
 impl ExprType for LiteralBool {
-    fn toSymbol(self: Box<Self>) -> Symbol {
-        return Symbol::LiteralBool(*self);
+    fn getSymbolType(&self) -> &dyn SymbolType {
+        return self;
     }
 }
 

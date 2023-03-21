@@ -9,7 +9,11 @@ pub enum ResolutionError {
     CircularDependencies(Vec<String>),
     // class field declared with let, but no default expr provided
     ResolutionClassField(ModulePos),
-    ExpectedType(Type, Type),
+    // operation cannot be applied to value
+    InvalidOperation(String),
+    // operation cannot be applied to type
+    InvalidOperationType(Type, String),
+    ExpectedType(Type, Type, String),
     UnknownType(String),
     UnknownFunction(String),
     UnresolvedType(ModulePos, String),

@@ -4,10 +4,10 @@ use once_cell::sync::Lazy;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
 
-pub static CHARACTER_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Character { implicitConversions: vec![] })));
+pub static CHARACTER_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Character { explicitConversions: vec![] })));
 
 pub struct Character {
-    implicitConversions: Vec<Type>,
+    explicitConversions: Vec<Type>,
 }
 
 impl TypeInfo for Character {
@@ -19,7 +19,7 @@ impl TypeInfo for Character {
         return 4;
     }
 
-    fn getImplicitConversions(&self) -> &Vec<Type> {
-        return &self.implicitConversions;
+    fn getExplicitConversions(&self) -> &Vec<Type> {
+        return &self.explicitConversions;
     }
 }

@@ -3,8 +3,8 @@ use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::sync::Arc;
-use crate::ast::visibility::Visibility;
 
+use crate::ast::visibility::Visibility;
 use crate::resolver::typeinfo::Type;
 
 pub struct Parameter {

@@ -15,7 +15,7 @@ pub struct ClassTypeInfo {
     staticSize: u32,
     visibility: Visibility,
     fieldVec: Vec<ClassField>,
-    implicitConversions: Vec<Type>,
+    explicitConversions: Vec<Type>,
 }
 
 impl ClassTypeInfo {
@@ -25,7 +25,7 @@ impl ClassTypeInfo {
             staticSize: 0,
             visibility,
             fieldVec: Vec::new(),
-            implicitConversions: Vec::new(),
+            explicitConversions: Vec::new(),
         }
     }
 
@@ -60,7 +60,7 @@ impl TypeInfo for ClassTypeInfo {
         return self.staticSize;
     }
 
-    fn getImplicitConversions(&self) -> &Vec<Type> {
-        return &self.implicitConversions;
+    fn getExplicitConversions(&self) -> &Vec<Type> {
+        return &self.explicitConversions;
     }
 }

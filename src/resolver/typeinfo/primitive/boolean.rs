@@ -4,10 +4,10 @@ use once_cell::sync::Lazy;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
 
-pub static BOOLEAN_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Boolean { implicitConversions: vec![] })));
+pub static BOOLEAN_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Boolean { explicitConversions: vec![] })));
 
 pub struct Boolean {
-    implicitConversions: Vec<Type>,
+    explicitConversions: Vec<Type>,
 }
 
 impl TypeInfo for Boolean {
@@ -19,7 +19,7 @@ impl TypeInfo for Boolean {
         return 1;
     }
 
-    fn getImplicitConversions(&self) -> &Vec<Type> {
-        return &self.implicitConversions;
+    fn getExplicitConversions(&self) -> &Vec<Type> {
+        return &self.explicitConversions;
     }
 }

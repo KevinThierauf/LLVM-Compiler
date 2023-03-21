@@ -3,13 +3,15 @@ use crate::resolver::resolvedast::statement::StatementType;
 use crate::resolver::typeinfo::Type;
 
 #[derive(Debug)]
-pub struct VariableDeclare {
-    ty: Type
+pub struct ResolvedVariable {
+    pub variableName: String,
+    pub ty: Type
 }
 
-impl StatementType for VariableDeclare {}
+impl StatementType for ResolvedVariable {
+}
 
-impl ResolvedExprType for VariableDeclare {
+impl ResolvedExprType for ResolvedVariable {
     fn getExpressionType(&self) -> Type {
         return self.ty.to_owned();
     }

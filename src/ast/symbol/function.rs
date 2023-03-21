@@ -1,9 +1,9 @@
 use crate::ast::symbol::block::BlockSym;
 use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::SymbolType;
+use crate::ast::visibility::Visibility;
 use crate::module::Keyword;
 use crate::module::modulepos::{ModulePos, ModuleRange};
-use crate::ast::visibility::Visibility;
 
 #[derive(Debug)]
 pub struct FunctionParameter {

@@ -1,4 +1,4 @@
-use crate::ast::symbol::{Symbol, SymbolType};
+use crate::ast::symbol::SymbolType;
 use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::module::modulepos::ModuleRange;
@@ -11,8 +11,8 @@ pub struct LiteralVoid {
 }
 
 impl ExprType for LiteralVoid {
-    fn toSymbol(self: Box<Self>) -> Symbol {
-        return Symbol::LiteralVoid(*self);
+    fn getSymbolType(&self) -> &dyn SymbolType {
+        return self;
     }
 }
 

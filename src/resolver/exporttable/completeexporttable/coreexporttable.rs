@@ -2,11 +2,7 @@ use std::sync::Arc;
 
 use once_cell::sync::Lazy;
 
-use crate::ast::AbstractSyntaxTree;
-use crate::ast::symbol::breaksym::BreakSym;
-use crate::ast::symbol::Symbol;
 use crate::ast::visibility::Visibility;
-use crate::module::Module;
 use crate::resolver::exporttable::completeexporttable::CompleteExportTable;
 use crate::resolver::function::{Function, Parameter};
 use crate::resolver::typeinfo::primitive::boolean::BOOLEAN_TYPE;
@@ -18,13 +14,6 @@ use crate::resolver::typeinfo::void::VOID_TYPE;
 
 pub static CORE_EXPORT_TABLE: Lazy<Arc<CompleteExportTable>> = Lazy::new(|| {
     let mut builder = CompleteExportTable::newBuilder();
-
-    let module = Module::newFrom(vec![]);
-    let ast = AbstractSyntaxTree::newFrom(vec![Symbol::Break(BreakSym {
-        range: module.getModuleRange(0..0),
-        label: None,
-    })]);
-    let pos = ast.getPos(0);
 
     // primitive types
     builder.addExportedType(INTEGER_TYPE.to_owned()).expect("failed to build core table");

@@ -1,9 +1,10 @@
 use strum_macros::EnumDiscriminants;
+
 use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::function::FunctionDefinitionSym;
 use crate::ast::symbol::SymbolType;
-use crate::module::modulepos::{ModulePos, ModuleRange};
 use crate::ast::visibility::Visibility;
+use crate::module::modulepos::{ModulePos, ModuleRange};
 
 #[derive(Debug)]
 pub struct ClassFieldDefinition {
