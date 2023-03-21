@@ -1,4 +1,4 @@
-use crate::resolver::resolvedast::statement::Statement;
+use crate::resolver::resolvedast::resolvedscope::ResolvedScope;
 
 pub mod functioncall;
 pub mod ifstatement;
@@ -10,16 +10,19 @@ pub mod returnstatement;
 pub mod resolvedoperator;
 pub mod resolvedvariable;
 pub mod constructorcall;
+pub mod resolvedproperty;
+pub mod resolvedfunctiondefinition;
+pub mod resolvedscope;
 
 #[derive(Debug)]
 pub struct ResolvedAST {
-    statementVec: Vec<Statement>,
+    resolved: ResolvedScope
 }
 
 impl ResolvedAST {
-    pub fn new(statementVec: Vec<Statement>) -> Self {
+    pub fn new(resolved: ResolvedScope) -> Self {
         return Self {
-            statementVec
+            resolved
         };
     }
 }

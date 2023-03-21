@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 use crate::resolver::resolvedast::ifstatement::IfStatement;
 use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
+use crate::resolver::resolvedast::resolvedfunctiondefinition::ResolvedFunctionDefinition;
+use crate::resolver::resolvedast::resolvedscope::ResolvedScope;
 use crate::resolver::resolvedast::returnstatement::ReturnStatement;
 use crate::resolver::resolvedast::whilestatement::WhileStatement;
 
@@ -12,4 +14,7 @@ pub enum Statement {
     While(Box<WhileStatement>),
     Return(ReturnStatement),
     Expr(ResolvedExpr),
+    FunctionDefinition(ResolvedFunctionDefinition),
+    Scope(ResolvedScope),
+    Multiple(Vec<Statement>),
 }

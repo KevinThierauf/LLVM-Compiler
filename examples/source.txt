@@ -1,19 +1,18 @@
-let structure = new Structure();
+Structure structure = new Structure()
 
 structure.method()
-// 0..1
 
-//import test
-//import test as something
-
-let variable = 6
-let variable2 = 7
+int variable = 6
+int variable2 = 7
 
 int function() {
+    print("Hello, World!")
     return 0
 }
 
-print("Hello, World!")
+if function() == 0 {
+    print("success")
+}
 
 int var = 0
 outer:
@@ -21,7 +20,7 @@ while var < 10 {
     var++
     while false {
         print("never called")
-        continue outer
+        //continue outer
     }
 }
 
@@ -41,18 +40,18 @@ class Structure {
 
 // Line comment
 
-let variable3 = variable + variable2
+int variable3 = variable + variable2
 variable3 ++
 variable3++
 variable3 += 7
 
 void functionArgs(int a, int b, int c) {
-    let variable3 = variable + variable2
+    int variable3 = variable + variable2
     variable3 ++
     variable3++
     variable3 += 7
 }
 
-let f = 12.0
+float f = 12.0
 functionArgs(1, 2, 3)
 functionArgs(1,2,3)

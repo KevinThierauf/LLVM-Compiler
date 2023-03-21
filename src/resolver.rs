@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+use std::mem::swap;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -7,26 +9,37 @@ use hashbrown::HashMap;
 
 use crate::ast::AbstractSyntaxTree;
 use crate::ast::symbol::{Symbol, SymbolType};
+use crate::ast::symbol::block::BlockSym;
 use crate::ast::symbol::expr::Expr;
+use crate::ast::symbol::expr::functioncall::FunctionCallExpr;
+use crate::ast::symbol::function::FunctionDefinitionSym;
 use crate::module::modulepos::ModulePos;
 use crate::module::Operator;
 use crate::resolver::exporttable::completeexporttable::CompleteExportTable;
 use crate::resolver::exporttable::GlobalExportTable;
 use crate::resolver::exporttable::incompleteexporttable::IncompleteExportTable;
+use crate::resolver::function::Function;
 use crate::resolver::resolutionerror::ResolutionError;
 use crate::resolver::resolvedast::constructorcall::ConstructorCall;
 use crate::resolver::resolvedast::functioncall::FunctionCall;
 use crate::resolver::resolvedast::ifstatement::IfStatement;
 use crate::resolver::resolvedast::ResolvedAST;
 use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
+use crate::resolver::resolvedast::resolvedfunctiondefinition::ResolvedFunctionDefinition;
 use crate::resolver::resolvedast::resolvedoperator::ResolvedOperator;
+use crate::resolver::resolvedast::resolvedproperty::ResolvedProperty;
+use crate::resolver::resolvedast::resolvedscope::ResolvedScope;
 use crate::resolver::resolvedast::resolvedvariable::ResolvedVariable;
+use crate::resolver::resolvedast::returnstatement::ReturnStatement;
 use crate::resolver::resolvedast::statement::Statement;
 use crate::resolver::resolvedast::variabledeclare::VariableDeclare;
 use crate::resolver::resolvedast::whilestatement::WhileStatement;
 use crate::resolver::typeinfo::primitive::boolean::BOOLEAN_TYPE;
+use crate::resolver::typeinfo::primitive::character::CHARACTER_TYPE;
+use crate::resolver::typeinfo::primitive::float::FLOAT_TYPE;
 use crate::resolver::typeinfo::primitive::integer::INTEGER_TYPE;
 use crate::resolver::typeinfo::Type;
+use crate::resolver::typeinfo::void::VOID_TYPE;
 
 pub mod exporttable;
 pub mod resolvedast;
@@ -73,18 +86,20 @@ impl Resolver {
     pub fn getResolvedAST(self) -> Result<ResolvedAST, Vec<ResolutionError>> {
         let mut resolutionHandler = ResolutionHandler {
             exportTable: self.exportTable.getCompleteExportTableBlocking().ok_or_else(|| vec![])?,
-            resolver: Rc::new(TopLevelResolver),
+            resolver: vec![Rc::new(TopLevelResolver)],
             errorVec: Vec::new(),
             scope: Scope::root(),
         };
 
-        return if let Some(vec) = resolutionHandler.resolveAll(self.ast.getSymbols().iter()) {
+        return if let Some(statementVec) = resolutionHandler.resolveAll(self.ast.getSymbols().iter()) {
             debug_assert!(resolutionHandler.errorVec.is_empty());
-            Ok(ResolvedAST::new(vec))
+            Ok(ResolvedAST::new(ResolvedScope {
+                statementVec,
+            }))
         } else {
             debug_assert!(!resolutionHandler.errorVec.is_empty(), "compilation failed but no errors provided");
             Err(resolutionHandler.errorVec)
-        }
+        };
     }
 }
 
@@ -94,13 +109,15 @@ enum Resolution {
     Parent,
 }
 
-trait ResolverType {
+trait ResolverType: 'static + Debug {
     fn resolve(&self, resolutionHandler: &mut ResolutionHandler, symbol: &Symbol) -> Resolution;
 }
 
+#[derive(Debug)]
 struct TopLevelResolver;
 
-struct FunctionResolver;
+#[derive(Debug)]
+struct FunctionResolver(Function);
 
 struct Scope {
     parent: Option<Box<Scope>>,
@@ -108,20 +125,84 @@ struct Scope {
 }
 
 struct ResolutionHandler {
-    resolver: Rc<dyn ResolverType>,
+    resolver: Vec<Rc<dyn ResolverType>>,
     errorVec: Vec<ResolutionError>,
     exportTable: Arc<CompleteExportTable>,
     scope: Scope,
+}
+
+impl TopLevelResolver {
+    fn checkReturnStatement(errorVec: &mut Vec<ResolutionError>, returnType: Type, statementVec: &Vec<Statement>) {
+        if returnType != VOID_TYPE.to_owned() {
+            // last statement must be return statement
+            if let Some(last) = statementVec.last() {
+                if let Statement::Return(v) = last {
+                    // should have been checked earlier
+                    debug_assert_eq!(v.expr.as_ref().map(|v| v.getExpressionType()), Some(returnType));
+                    // success
+                    return;
+                }
+            }
+            errorVec.push(ResolutionError::MissingReturn(format!("function missing return (non-void functions must always have return statement as last statement in function).", )))
+        }
+    }
+
+    fn resolveFunction(&self, selfType: Option<Type>, function: Function, resolutionHandler: &mut ResolutionHandler, functionDefinition: &FunctionDefinitionSym) -> Option<ResolvedFunctionDefinition> {
+        // parameter scope
+        resolutionHandler.pushScope();
+
+        fn resolveFunctionInner(selfType: Option<Type>, function: &Function, resolutionHandler: &mut ResolutionHandler, functionDefinition: &FunctionDefinitionSym) -> Option<ResolvedScope> {
+            if let Some(selfType) = selfType {
+                resolutionHandler.scope.declareVariable("self", selfType, &mut resolutionHandler.errorVec)?;
+            }
+
+            for parameter in &function.parameters {
+                resolutionHandler.scope.declareVariable(&parameter.name, parameter.ty.to_owned(), &mut resolutionHandler.errorVec)?;
+            }
+            resolutionHandler.pushResolver(FunctionResolver(function.to_owned()));
+            let resolvedScope = resolutionHandler.resolveBlock(&functionDefinition.functionBlock);
+            resolutionHandler.popResolver();
+            let resolvedScope = resolvedScope?;
+            TopLevelResolver::checkReturnStatement(&mut resolutionHandler.errorVec, function.returnType.to_owned(), &resolvedScope.statementVec);
+            return Some(resolvedScope);
+        }
+
+        let resolvedScope = resolveFunctionInner(selfType, &function, resolutionHandler, functionDefinition);
+        resolutionHandler.popScope();
+
+        return Some(ResolvedFunctionDefinition {
+            function,
+            scope: resolvedScope?,
+        });
+    }
 }
 
 impl ResolverType for TopLevelResolver {
     fn resolve(&self, resolutionHandler: &mut ResolutionHandler, symbol: &Symbol) -> Resolution {
         return match symbol {
             Symbol::ClassDefinition(symbol) => {
-                todo!()
+                let mut resolvedVec = Vec::new();
+                let classType = resolutionHandler.exportTable.getExportedType(&symbol.name.getToken().getSourceRange().getSourceInRange()).expect("unable to find type defined by class");
+                let functionInfo = resolutionHandler.exportTable.getTypeFunctionInfo(classType.to_owned());
+
+                for functionDefinition in &symbol.methods {
+                    let functionName = functionDefinition.functionName.getToken().getSourceRange().getSourceInRange();
+                    let function = functionInfo.getFunction(functionName).expect("unable to find function for class definition");
+                    if let Some(resolved) = self.resolveFunction(Some(classType.to_owned()), function, resolutionHandler, functionDefinition) {
+                        resolvedVec.push(Statement::FunctionDefinition(resolved));
+                    } else {
+                        return Resolution::Err;
+                    }
+                }
+                Resolution::Ok(Statement::Multiple(resolvedVec))
             }
-            Symbol::FunctionDefinition(symbol) => {
-                todo!()
+            Symbol::FunctionDefinition(functionDefinition) => {
+                let function = resolutionHandler.exportTable.getExportedFunction(functionDefinition.functionName.getToken().getSourceRange().getSourceInRange()).expect("unable to find function for definition");
+                return if let Some(resolved) = self.resolveFunction(None, function,resolutionHandler, functionDefinition) {
+                    Resolution::Ok(Statement::FunctionDefinition(resolved))
+                } else {
+                    Resolution::Err
+                };
             }
             _ => Resolution::Parent,
         };
@@ -132,7 +213,28 @@ impl ResolverType for FunctionResolver {
     fn resolve(&self, resolutionHandler: &mut ResolutionHandler, symbol: &Symbol) -> Resolution {
         return match symbol {
             Symbol::Return(symbol) => {
-                todo!()
+                let (statement, ty) = if let Some(expr) = &symbol.value {
+                    let resolved = resolutionHandler.resolveExpr(expr);
+                    if let Some(resolved) = resolved {
+                        let ty = resolved.getExpressionType();
+                        (Statement::Return(ReturnStatement {
+                            expr: Some(resolved),
+                        }), ty)
+                    } else {
+                        return Resolution::Err;
+                    }
+                } else {
+                    (Statement::Return(ReturnStatement {
+                        expr: None,
+                    }), VOID_TYPE.to_owned())
+                };
+
+                return if ty == self.0.returnType {
+                    Resolution::Ok(statement)
+                } else {
+                    resolutionHandler.errorVec.push(ResolutionError::ExpectedType(self.0.returnType.to_owned(), ty, format!("mismatched return type")));
+                    Resolution::Err
+                }
             }
             _ => Resolution::Parent,
         };
@@ -153,8 +255,46 @@ impl ResolutionHandler {
         return Some(statementVec);
     }
 
+    fn pushResolver(&mut self, resolver: impl ResolverType) {
+        self.resolver.push(Rc::new(resolver));
+    }
+
+    fn popResolver(&mut self) {
+        debug_assert!(self.resolver.len() > 1);
+        self.resolver.pop();
+    }
+
+    fn pushScope(&mut self) {
+        let mut tmp = Scope::root();
+        swap(&mut self.scope, &mut tmp);
+        self.scope = Scope::new(tmp);
+    }
+
+    fn popScope(&mut self) {
+        let mut tmp = None;
+        swap(&mut self.scope.parent, &mut tmp);
+        if let Some(parent) = tmp {
+            self.scope = *parent;
+        } else {
+            panic!("cannot pop scope (scope is root)");
+        }
+    }
+
+    fn resolveBlock(&mut self, block: &BlockSym) -> Option<ResolvedScope> {
+        self.pushScope();
+        let resolved = self.resolveAll(block.symbolVec.iter());
+        self.popScope();
+        return Some(ResolvedScope {
+            statementVec: resolved?,
+        });
+    }
+
+    fn resolveExpr(&mut self, expr: &Expr) -> Option<ResolvedExpr> {
+        Some(getResolvedExpression(self, expr, Box::new(|_, resolved| resolved))?)
+    }
+
     fn resolve(&mut self, symbol: &Symbol) -> Option<Statement> {
-        match self.resolver.to_owned().resolve(self, symbol) {
+        match self.resolver.last().unwrap().to_owned().resolve(self, symbol) {
             Resolution::Ok(symbol) => return Some(symbol),
             Resolution::Err => return None,
             Resolution::Parent => {
@@ -164,8 +304,7 @@ impl ResolutionHandler {
 
         return match symbol {
             Symbol::Block(symbol) => {
-                // todo!()
-                return None;
+                Some(Statement::Scope(self.resolveBlock(symbol)?))
             }
             Symbol::While(symbol) => {
                 return getResolvedExpression(self, &symbol.condition, Box::new(|resolutionHandler, expr| {
@@ -196,10 +335,10 @@ impl ResolutionHandler {
                 })).flatten();
             }
             Symbol::Expr(expr) => {
-                Some(Statement::Expr(getResolvedExpression(self, expr, Box::new(|_, resolved| resolved))?))
+                Some(Statement::Expr(self.resolveExpr(expr)?))
             }
             Symbol::ClassDefinition(symbol) => {
-                self.errorVec.push(ResolutionError::Unexpected(symbol.getRange().getStartPos(), "unexpected class definition".to_owned()));
+                self.errorVec.push(ResolutionError::Unexpected(symbol.getRange().getStartPos(), format!("unexpected class definition {:?}", self.resolver.last().unwrap())));
                 return None;
             }
             Symbol::Return(symbol) => {
@@ -285,6 +424,33 @@ fn getResolvedType<R>(resolutionHandler: &mut ResolutionHandler, modulePos: &Mod
     };
 }
 
+fn getResolvedFunctionCall(resolutionHandler: &mut ResolutionHandler, function: Function, functionCall: &FunctionCallExpr) -> Option<FunctionCall> {
+    return if functionCall.argVec.len() == function.parameters.len() {
+        let mut argVec = Vec::new();
+        for index in 0..functionCall.argVec.len() {
+            getResolvedExpression(resolutionHandler, &functionCall.argVec[index], Box::new(|resolutionHandler, expression| {
+                if expression.getExpressionType() == function.parameters[index].ty {
+                    argVec.push(expression);
+                } else {
+                    resolutionHandler.errorVec.push(ResolutionError::ExpectedType(function.parameters[index].ty.to_owned(), expression.getExpressionType(), format!("parameter type incorrect in function call")));
+                }
+            }));
+        }
+
+        if argVec.len() == functionCall.argVec.len() {
+            Some(FunctionCall {
+                function,
+                argVec,
+            })
+        } else {
+            None
+        }
+    } else {
+        resolutionHandler.errorVec.push(ResolutionError::ParameterMismatch(function.to_owned(), format!("parameter mismatch: expected {} args, found {}", function.parameters.len(), functionCall.argVec.len())));
+        None
+    };
+}
+
 fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr: &Expr, callback: Box<dyn 'a + FnOnce(&mut ResolutionHandler, ResolvedExpr) -> R>) -> Option<R> {
     let resolved = match expr {
         Expr::ConstructorCall(expr) => {
@@ -292,39 +458,16 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
                 resolutionHandler.errorVec.push(ResolutionError::Unsupported(expr.range.getStartPos(), format!("constructors do not support arguments")));
                 return None;
             }
-            getResolvedType(resolutionHandler, &expr.typeName, |resolutionHandler, ty| {
+            getResolvedType(resolutionHandler, &expr.typeName, |_, ty| {
                 ResolvedExpr::ConstructorCall(Box::new(ConstructorCall {
                     ty,
                 }))
             })?
-        },
+        }
         Expr::FunctionCall(expr) => {
             match resolutionHandler.exportTable.getExportedFunction(expr.functionName.getToken().getSourceRange().getSourceInRange()) {
                 Ok(function) => {
-                    if expr.argVec.len() == function.parameters.len() {
-                        let mut argVec = Vec::new();
-                        for index in 0..expr.argVec.len() {
-                            getResolvedExpression(resolutionHandler, &expr.argVec[index], Box::new(|resolutionHandler, expression| {
-                                if expression.getExpressionType() == function.parameters[index].ty {
-                                    argVec.push(expression);
-                                } else {
-                                    resolutionHandler.errorVec.push(ResolutionError::ExpectedType(function.parameters[index].ty.to_owned(), expression.getExpressionType(), format!("parameter type incorrect in function call")));
-                                }
-                            }));
-                        }
-
-                        if argVec.len() == expr.argVec.len() {
-                            ResolvedExpr::FunctionCall(Box::new(FunctionCall {
-                                function,
-                                argVec,
-                            }))
-                        } else {
-                            return None;
-                        }
-                    } else {
-                        resolutionHandler.errorVec.push(ResolutionError::ParameterMismatch(function.to_owned(), format!("parameter mismatch: expected {} args, found {}", function.parameters.len(), expr.argVec.len())));
-                        return None;
-                    }
+                    ResolvedExpr::FunctionCall(Box::new(getResolvedFunctionCall(resolutionHandler, function, expr)?))
                 }
                 Err(error) => {
                     resolutionHandler.errorVec.push(error);
@@ -334,28 +477,70 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
         }
         Expr::Operator(expr) => {
             if let Operator::Dot = expr.operator {
-                let structure = getResolvedExpression(resolutionHandler, &expr.operands[0], Box::new(|resolutionHandler, resolved| resolved));
+                let structure = getResolvedExpression(resolutionHandler, &expr.operands[0], Box::new(|_, resolved| resolved));
                 debug_assert!(structure.is_some() || !resolutionHandler.errorVec.is_empty(), "failed to resolve {:?} but no error provided", &expr.operands[0]);
                 let structure = structure?;
-                match expr.operands[1] {
-                    Expr::FunctionCall(_) => {}
-                    Expr::Variable(_) => {}
+                let structureType = structure.getExpressionType();
+                match &expr.operands[1] {
+                    Expr::FunctionCall(functionCall) => {
+                        let functionInfo = resolutionHandler.exportTable.getTypeFunctionInfo(structureType.to_owned());
+                        let functionName = functionCall.functionName.getToken().getSourceRange().getSourceInRange();
+                        match functionInfo.getFunction(functionName) {
+                            Some(function) => {
+                                let mut functionCall = getResolvedFunctionCall(resolutionHandler, function, functionCall)?;
+                                functionCall.argVec.insert(0, structure);
+                                ResolvedExpr::FunctionCall(Box::new(functionCall))
+                            }
+                            None => {
+                                resolutionHandler.errorVec.push(ResolutionError::UnknownFunction(format!("unable to find method '{functionName}' of class '{}'", structureType.getTypeName())));
+                                return None;
+                            }
+                        }
+                    }
+                    Expr::Variable(variable) => {
+                        let variableName = variable.getRange().getSource();
+                        if let Some(property) = structureType.getPropertyMap().get(&variableName) {
+                            ResolvedExpr::Property(Box::new(ResolvedProperty {
+                                value: structure,
+                                property: property.to_owned(),
+                            }))
+                        } else {
+                            resolutionHandler.errorVec.push(ResolutionError::UnknownVariable(format!("unable to find field '{variableName}' of class {}", structureType.getTypeName())));
+                            return None;
+                        }
+                    }
                     _ => {
                         resolutionHandler.errorVec.push(ResolutionError::InvalidOperation(format!("dot operator can only be used to access a variable or function, found {:?}", expr.operands[1])));
                         return None;
                     }
                 }
-                todo!()
             } else {
                 let mut exprVec = Vec::new();
 
-                for expr in expr.operands.iter().map(|expr| getResolvedExpression(resolutionHandler, expr, Box::new(|resolutionHandler, resolved| resolved))).collect::<Vec<_>>() {
+                for expr in expr.operands.iter().map(|expr| getResolvedExpression(resolutionHandler, expr, Box::new(|_, resolved| resolved))).collect::<Vec<_>>() {
                     debug_assert!(expr.is_some() || !resolutionHandler.errorVec.is_empty());
                     exprVec.push(expr?);
                 }
 
                 let expressionType = match expr.operator {
-                    Operator::Greater | Operator::Less | Operator::GreaterEq | Operator::LessEq | Operator::CompareEq | Operator::CompareNotEq | Operator::ModAssign | Operator::DivAssign | Operator::Div | Operator::MultAssign | Operator::MinusAssign | Operator::PlusAssign | Operator::Plus | Operator::Minus | Operator::Mult => {
+                    Operator::Greater | Operator::Less | Operator::GreaterEq | Operator::LessEq | Operator::CompareEq | Operator::CompareNotEq => {
+                        fn isPrimitiveType(ty: Type) -> bool {
+                            return ty == INTEGER_TYPE.to_owned() || ty == BOOLEAN_TYPE.to_owned() || ty == FLOAT_TYPE.to_owned() || ty == CHARACTER_TYPE.to_owned();
+                        }
+
+                        if exprVec[0].getExpressionType() != exprVec[1].getExpressionType() {
+                            resolutionHandler.errorVec.push(ResolutionError::ExpectedType(exprVec[0].getExpressionType(), exprVec[1].getExpressionType(), format!("mismatched types for operation expression")));
+                            return None;
+                        }
+
+                        if !isPrimitiveType(exprVec[0].getExpressionType()) {
+                            resolutionHandler.errorVec.push(ResolutionError::InvalidOperationType(exprVec[0].getExpressionType(), format!("cannot apply {:?} operator to non-primitive type", expr.operator)));
+                            return None;
+                        }
+
+                        BOOLEAN_TYPE.to_owned()
+                    }
+                     Operator::ModAssign | Operator::DivAssign | Operator::Div | Operator::MultAssign | Operator::MinusAssign | Operator::PlusAssign | Operator::Plus | Operator::Minus | Operator::Mult => {
                         // arithmetic type
                         if exprVec[0].getExpressionType() != exprVec[1].getExpressionType() {
                             resolutionHandler.errorVec.push(ResolutionError::ExpectedType(exprVec[0].getExpressionType(), exprVec[1].getExpressionType(), format!("mismatched types for operation expression")));
@@ -420,7 +605,7 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
                     ty: resolutionHandler.scope.declareVariable(expr.variableName.getToken().getSourceRange().getSourceInRange(), ty, &mut resolutionHandler.errorVec)?.ty,
                 }))).flatten()?
             } else {
-                resolutionHandler.errorVec.push(ResolutionError::UnresolvedType(expr.range.getStartPos(), format!("unable to determine type for variable {}", expr.variableName.getToken().getSourceRange().getSourceInRange())));
+                resolutionHandler.errorVec.push(ResolutionError::Unsupported(expr.range.getStartPos(), format!("type inference not supported (for variable '{}')", expr.variableName.getToken().getSourceRange().getSourceInRange())));
                 return None;
             }
         }

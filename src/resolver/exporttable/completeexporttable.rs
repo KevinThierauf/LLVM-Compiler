@@ -49,7 +49,7 @@ impl CompleteExportTable {
         debug_assert!(_prev.is_none());
     }
 
-    pub fn getTypeFunctionInfo(&mut self, ty: Type) -> Arc<TypeFunctionInfo> {
+    pub fn getTypeFunctionInfo(&self, ty: Type) -> Arc<TypeFunctionInfo> {
         return self.typeFunctionInfo.get(&ty).unwrap_or(EMPTY_FUNCTION_INFO.deref()).to_owned();
     }
 

@@ -6,6 +6,7 @@ use once_cell::sync::Lazy;
 use crate::resolver::resolvedast::constructorcall::ConstructorCall;
 use crate::resolver::resolvedast::functioncall::FunctionCall;
 use crate::resolver::resolvedast::resolvedoperator::ResolvedOperator;
+use crate::resolver::resolvedast::resolvedproperty::ResolvedProperty;
 use crate::resolver::resolvedast::resolvedvariable::ResolvedVariable;
 use crate::resolver::resolvedast::statement::StatementType;
 use crate::resolver::resolvedast::variabledeclare::VariableDeclare;
@@ -59,6 +60,7 @@ pub enum ResolvedExpr {
     ConstructorCall(Box<ConstructorCall>),
     VariableDeclaration(VariableDeclare),
     Variable(ResolvedVariable),
+    Property(Box<ResolvedProperty>),
     LiteralBool(bool),
     LiteralChar(u32),
     LiteralFloat(f64),
@@ -75,6 +77,7 @@ impl ResolvedExpr {
             ResolvedExpr::FunctionCall(v) => v.deref(),
             ResolvedExpr::VariableDeclaration(v) => v,
             ResolvedExpr::Variable(v) => v,
+            ResolvedExpr::Property(v) => v.deref(),
             ResolvedExpr::LiteralBool(_) => {
                 static LITERAL_RESOLVED_EXPR_TYPE: Lazy<ResolvedExprTypeValue> = Lazy::new(|| ResolvedExprTypeValue::new(BOOLEAN_TYPE.to_owned(), false));
                 return LITERAL_RESOLVED_EXPR_TYPE.deref();

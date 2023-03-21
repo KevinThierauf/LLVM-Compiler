@@ -50,7 +50,6 @@ impl IncompleteFunction {
 
 #[derive(Debug)]
 struct IncompleteField {
-    visibility: Visibility,
     typeName: String,
     name: String,
 }
@@ -58,18 +57,18 @@ struct IncompleteField {
 #[derive(Debug)]
 struct IncompleteClass {
     name: String,
-    visibility: Visibility,
     fields: Vec<IncompleteField>,
     functions: Vec<IncompleteFunction>,
 }
 
 impl IncompleteClass {
     fn new(classDefinition: &ClassDefinitionSym) -> Result<Self, ResolutionError> {
+        if classDefinition.visibility != Visibility::Private {
+            return Err(ResolutionError::Unsupported(classDefinition.range.getStartPos(), format!("unsupported visibility modifier on class")));
+        }
         return Ok(Self {
             name: classDefinition.name.getToken().getSourceRange().getSourceInRange().to_owned(),
-            visibility: classDefinition.visibility,
             fields: classDefinition.fields.iter().map(|v| IncompleteField {
-                visibility: v.visibility,
                 typeName: v.typeName.to_owned().unwrap().getToken().getSourceRange().getSourceInRange().to_owned(),
                 name: v.name.getToken().getSourceRange().getSourceInRange().to_owned(),
             }).collect(),
@@ -180,7 +179,7 @@ impl IncompleteExportTable {
         let mut index = 0;
         while index < self.classVec.len() {
             let class = &mut self.classVec[index];
-            if exportClasses.insert(class.name.to_owned(), ClassTypeInfo::newBuilder(class.name.to_owned(), class.visibility)).is_some() {
+            if exportClasses.insert(class.name.to_owned(), ClassTypeInfo::newBuilder(class.name.to_owned())).is_some() {
                 errorVec.push(ResolutionError::ConflictingTypeDefinition(class.name.to_owned()));
                 self.classVec.swap_remove(index);
             } else {
@@ -199,7 +198,7 @@ impl IncompleteExportTable {
                     let fieldType = table.getExportedType(&field.typeName);
                     return match fieldType {
                         Ok(ty) => {
-                            if let Err(error) = exportClasses.get_mut(&class.name.to_owned()).unwrap().addFieldFrom(field.visibility, ty, field.name.to_owned()) {
+                            if let Err(error) = exportClasses.get_mut(&class.name.to_owned()).unwrap().addFieldFrom(ty, field.name.to_owned()) {
                                 errorVec.push(error);
                                 errorValue = true;
                             }

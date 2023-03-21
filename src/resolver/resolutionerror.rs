@@ -20,6 +20,7 @@ pub enum ResolutionError {
     UnresolvedType(ModulePos, String),
     ParameterMismatch(Function, String),
     ConflictingVariable(String, String),
+    MissingReturn(String),
     // conflicting field name (type name, field name)
     ConflictingFields(String, String),
     ConflictingType(Type, Type),

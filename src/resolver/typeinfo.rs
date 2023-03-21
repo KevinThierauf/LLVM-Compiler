@@ -3,19 +3,30 @@ use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::sync::Arc;
+use hashbrown::HashMap;
+use once_cell::sync::Lazy;
 
 pub mod tuple;
-pub mod arraystatic;
 pub mod void;
 pub mod primitive;
 pub mod class;
-pub mod arraydynamic;
 pub mod string;
+
+#[derive(Debug, Clone)]
+pub struct TypeProperty {
+    pub ty: Type,
+    pub name: String,
+}
 
 pub trait TypeInfo: Sync + Send {
     fn getTypeName(&self) -> &str;
     fn getStaticSize(&self) -> u32;
     fn getExplicitConversions(&self) -> &Vec<Type>;
+
+    fn getPropertyMap(&self) -> &HashMap<String, TypeProperty> {
+        static EMPTY_MAP: Lazy<HashMap<String, TypeProperty>> = Lazy::new(|| HashMap::new());
+        return EMPTY_MAP.deref();
+    }
 
     fn isArithmeticType(&self) -> bool {
         return false;
