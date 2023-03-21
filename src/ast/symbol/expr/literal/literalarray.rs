@@ -4,7 +4,6 @@ use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::SymbolType;
 use crate::module::modulepos::ModuleRange;
-use crate::resolver::typeinfo::Type;
 
 pub struct LiteralArray {
     pub range: ModuleRange,
@@ -30,7 +29,4 @@ impl SymbolType for LiteralArray {
 }
 
 impl LiteralType for LiteralArray {
-    fn getLiteralType(&self) -> Type {
-        todo!()
-    }
 }

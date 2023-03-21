@@ -2,7 +2,6 @@ use crate::ast::symbol::expr::{Expr, ExprType};
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::SymbolType;
 use crate::module::modulepos::ModuleRange;
-use crate::resolver::typeinfo::Type;
 
 #[derive(Debug)]
 pub struct LiteralTuple {
@@ -23,7 +22,4 @@ impl SymbolType for LiteralTuple {
 }
 
 impl LiteralType for LiteralTuple {
-    fn getLiteralType(&self) -> Type {
-        todo!()
-    }
 }

@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use constructorcallexpr::ConstructorCallExpr;
+
 use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::symbol::expr::functioncall::FunctionCallExpr;
 use crate::ast::symbol::expr::literal::literalarray::LiteralArray;
@@ -14,7 +16,6 @@ use crate::ast::symbol::expr::operatorexpr::OperatorExpr;
 use crate::ast::symbol::expr::variabledeclaration::VariableDeclarationExpr;
 use crate::ast::symbol::expr::variableexpr::VariableExpr;
 use crate::module::modulepos::ModuleRange;
-use constructorcallexpr::ConstructorCallExpr;
 
 pub mod operatorexpr;
 pub mod functioncall;

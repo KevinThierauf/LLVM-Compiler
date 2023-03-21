@@ -3,8 +3,6 @@ use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::SymbolType;
 use crate::module::FileRange;
 use crate::module::modulepos::ModuleRange;
-use crate::resolver::typeinfo::string::STRING_TYPE;
-use crate::resolver::typeinfo::Type;
 
 #[derive(Debug)]
 pub struct LiteralString {
@@ -25,7 +23,4 @@ impl SymbolType for LiteralString {
 }
 
 impl LiteralType for LiteralString {
-    fn getLiteralType(&self) -> Type {
-        return STRING_TYPE.to_owned();
-    }
 }

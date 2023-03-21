@@ -4,8 +4,6 @@ use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::SymbolType;
 use crate::module::modulepos::ModuleRange;
-use crate::resolver::typeinfo::primitive::character::CHARACTER_TYPE;
-use crate::resolver::typeinfo::Type;
 
 pub struct LiteralChar {
     pub range: ModuleRange,
@@ -31,7 +29,4 @@ impl SymbolType for LiteralChar {
 }
 
 impl LiteralType for LiteralChar {
-    fn getLiteralType(&self) -> Type {
-        return CHARACTER_TYPE.to_owned();
-    }
 }

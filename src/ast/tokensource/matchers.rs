@@ -8,6 +8,7 @@ use crate::ast::symbol::block::BlockSym;
 use crate::ast::symbol::breaksym::BreakSym;
 use crate::ast::symbol::classdefinition::{ClassDefinitionSym, ClassFieldDefinition, ClassMember, ClassStaticFieldDefinition};
 use crate::ast::symbol::continuesym::ContinueSym;
+use crate::ast::symbol::expr::constructorcallexpr::ConstructorCallExpr;
 use crate::ast::symbol::expr::Expr;
 use crate::ast::symbol::expr::functioncall::FunctionCallExpr;
 use crate::ast::symbol::expr::literal::literalarray::LiteralArray;
@@ -32,7 +33,6 @@ use crate::ast::tokensource::matchtype::{getLazyMatch, getMappedMatch, getMatchA
 use crate::ast::visibility::Visibility;
 use crate::module::{FileRange, Keyword, Module, Operator, ParenthesisType, QuoteType, TokenType, TokenTypeDiscriminants};
 use crate::module::modulepos::{ModulePos, ModuleRange};
-use crate::ast::symbol::expr::constructorcallexpr::ConstructorCallExpr;
 
 pub fn getMatchKeyword(keyword: Keyword) -> impl MatchType<Value = ()> {
     return getMatchFrom(format!("{keyword:?}"), move |pos| {

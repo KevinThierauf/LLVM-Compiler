@@ -4,8 +4,6 @@ use crate::ast::symbol::expr::ExprType;
 use crate::ast::symbol::expr::literal::LiteralType;
 use crate::ast::symbol::SymbolType;
 use crate::module::modulepos::ModuleRange;
-use crate::resolver::typeinfo::primitive::boolean::BOOLEAN_TYPE;
-use crate::resolver::typeinfo::Type;
 
 pub struct LiteralBool {
     pub range: ModuleRange,
@@ -40,7 +38,4 @@ impl ExprType for LiteralBool {
 }
 
 impl LiteralType for LiteralBool {
-    fn getLiteralType(&self) -> Type {
-        return BOOLEAN_TYPE.to_owned();
-    }
 }
