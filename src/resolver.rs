@@ -198,7 +198,7 @@ impl ResolverType for TopLevelResolver {
             }
             Symbol::FunctionDefinition(functionDefinition) => {
                 let function = resolutionHandler.exportTable.getExportedFunction(functionDefinition.functionName.getToken().getSourceRange().getSourceInRange()).expect("unable to find function for definition");
-                return if let Some(resolved) = self.resolveFunction(None, function,resolutionHandler, functionDefinition) {
+                return if let Some(resolved) = self.resolveFunction(None, function, resolutionHandler, functionDefinition) {
                     Resolution::Ok(Statement::FunctionDefinition(resolved))
                 } else {
                     Resolution::Err
@@ -234,7 +234,7 @@ impl ResolverType for FunctionResolver {
                 } else {
                     resolutionHandler.errorVec.push(ResolutionError::ExpectedType(self.0.returnType.to_owned(), ty, format!("mismatched return type")));
                     Resolution::Err
-                }
+                };
             }
             _ => Resolution::Parent,
         };
@@ -540,7 +540,21 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
 
                         BOOLEAN_TYPE.to_owned()
                     }
-                     Operator::ModAssign | Operator::DivAssign | Operator::Div | Operator::MultAssign | Operator::MinusAssign | Operator::PlusAssign | Operator::Plus | Operator::Minus | Operator::Mult => {
+                    Operator::Plus | Operator::Minus | Operator::Mult | Operator::Div => {
+                            // arithmetic type
+                            if exprVec[0].getExpressionType() != exprVec[1].getExpressionType() {
+                                resolutionHandler.errorVec.push(ResolutionError::ExpectedType(exprVec[0].getExpressionType(), exprVec[1].getExpressionType(), format!("mismatched types for operation expression")));
+                                return None;
+                            }
+
+                            if !exprVec[0].getExpressionType().isArithmeticType() {
+                                resolutionHandler.errorVec.push(ResolutionError::InvalidOperationType(exprVec[0].getExpressionType(), format!("cannot apply {:?} operator to non-arithmetic type", expr.operator)));
+                                return None;
+                            }
+
+                            exprVec[0].getExpressionType()
+                    }
+                    Operator::ModAssign | Operator::DivAssign | Operator::MultAssign | Operator::MinusAssign | Operator::PlusAssign => {
                         // arithmetic type
                         if exprVec[0].getExpressionType() != exprVec[1].getExpressionType() {
                             resolutionHandler.errorVec.push(ResolutionError::ExpectedType(exprVec[0].getExpressionType(), exprVec[1].getExpressionType(), format!("mismatched types for operation expression")));
@@ -551,6 +565,17 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
                             resolutionHandler.errorVec.push(ResolutionError::InvalidOperationType(exprVec[0].getExpressionType(), format!("cannot apply {:?} operator to non-arithmetic type", expr.operator)));
                             return None;
                         }
+
+                        if !exprVec[0].getResolvedExprType().isAssignable() {
+                            resolutionHandler.errorVec.push(ResolutionError::InvalidOperation(format!("value is not assignable")));
+                            return None;
+                        }
+                        
+                        if matches!(exprVec[0], ResolvedExpr::VariableDeclaration(_)) {
+                            resolutionHandler.errorVec.push(ResolutionError::InvalidOperation(format!("cannot apply operator {:?} to variable declaration", expr.operator)));
+                            return None;
+                        }
+
                         exprVec[0].getExpressionType()
                     }
                     Operator::Increment | Operator::Decrement | Operator::Mod => {

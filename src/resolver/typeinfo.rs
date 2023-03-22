@@ -76,3 +76,9 @@ impl PartialEq<Self> for Type {
 }
 
 impl Eq for Type {}
+
+impl PartialEq<Lazy<Self>> for Type {
+    fn eq(&self, other: &Lazy<Self>) -> bool {
+        return self == other.deref();
+    }
+}

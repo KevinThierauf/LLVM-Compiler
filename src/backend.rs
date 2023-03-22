@@ -1,3 +1,5 @@
+pub mod emit;
+
 use crate::resolver::resolvedast::ResolvedAST;
 
 pub struct CompiledModule {}

@@ -17,7 +17,7 @@ fn main() {
     let start = SystemTime::now();
     let compiler = Compiler::new(None, sourcePathVec);
 
-    if let Some(result) = compiler.getCompiledResult() {
+    if let Some(module) = compiler.getCompiledResult() {
         let end = SystemTime::now();
         println!("Compilation completed in {}ms", end.duration_since(start).unwrap().as_millis());
 
