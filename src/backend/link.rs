@@ -19,10 +19,11 @@ fn checkPath(path: &str) {
     if let Ok(output) = Command::new(path).arg("--help").output() {
         if !output.status.success() {
             error!("error when running {path}, program returned exit code {:?}", output.status);
+            exit(3);
         }
     } else {
         error!("unable to find {path}, is it available on path?");
-        exit(1);
+        exit(2);
     }
 }
 

@@ -2,6 +2,7 @@ use std::cmp::min;
 use std::num::NonZeroUsize;
 use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
+use std::process::exit;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 
@@ -102,7 +103,11 @@ impl Compiler {
 
         let mut compiledModule = CompiledModule::empty(self.context);
         for handle in self.threads {
-            compiledModule.merge(handle.join().expect("compile job panicked")?);
+            if let Ok(other) = handle.join() {
+                compiledModule.merge(other?);
+            } else {
+                exit(1);
+            }
         }
         return Some(compiledModule);
     }
