@@ -18,7 +18,6 @@ use crate::ast::symbol::expr::literal::literalfloat::LiteralFloat;
 use crate::ast::symbol::expr::literal::literalinteger::LiteralInteger;
 use crate::ast::symbol::expr::literal::literalstring::LiteralString;
 use crate::ast::symbol::expr::literal::literaltuple::LiteralTuple;
-use crate::ast::symbol::expr::literal::literalvoid::LiteralVoid;
 use crate::ast::symbol::expr::operatorexpr::{OperationComponent, OperatorExpr};
 use crate::ast::symbol::expr::variabledeclaration::VariableDeclarationExpr;
 use crate::ast::symbol::expr::variableexpr::VariableExpr;
@@ -182,7 +181,6 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
         MatchOption::new(getMatchLiteralFloat(), |_, v| Ok(Symbol::Expr(Expr::LiteralFloat(v)))),
         MatchOption::new(getMatchLiteralInteger(), |_, v| Ok(Symbol::Expr(Expr::LiteralInteger(v)))),
         MatchOption::new(getMatchLiteralString(), |_, v| Ok(Symbol::Expr(Expr::LiteralString(v)))),
-        MatchOption::new(getMatchLiteralVoid(), |_, v| Ok(Symbol::Expr(Expr::LiteralVoid(v)))),
         MatchOption::new(getMatchLiteralTuple(), |_, v| Ok(Symbol::Expr(Expr::LiteralTuple(v)))),
     ], |pos, mut matchVec, errVec| {
         return if matchVec.is_empty() {
@@ -220,7 +218,6 @@ pub fn getMatchExcludingExpr(excludeOperator: bool, excludeDeclaration: bool) ->
         MatchOption::new(getMatchLiteralFloat(), |_, v| Ok(Expr::LiteralFloat(v))),
         MatchOption::new(getMatchLiteralInteger(), |_, v| Ok(Expr::LiteralInteger(v))),
         MatchOption::new(getMatchLiteralString(), |_, v| Ok(Expr::LiteralString(v))),
-        MatchOption::new(getMatchLiteralVoid(), |_, v| Ok(Expr::LiteralVoid(v))),
         MatchOption::new(getMatchLiteralTuple(), |_, v| Ok(Expr::LiteralTuple(v))),
     ], |pos, options, err| {
         return if options.is_empty() {
@@ -746,13 +743,6 @@ pub fn getMatchLiteralString() -> impl MatchType<Value = LiteralString> {
     return getMatchQuote(QuoteType::Double, |range, fileRange| Ok(LiteralString {
         range,
         fileRange: fileRange.to_owned(),
-    }));
-}
-
-pub fn getMatchLiteralVoid() -> impl MatchType<Value = LiteralVoid> {
-    // void
-    return getMappedMatch(getMatchKeyword(Keyword::Void), |range, _| Ok(LiteralVoid {
-        range,
     }));
 }
 

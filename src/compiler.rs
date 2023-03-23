@@ -10,7 +10,7 @@ use log::{error, info};
 use parking_lot::Mutex;
 
 use crate::ast::{AbstractSyntaxTree, ASTError};
-use crate::backend::CompiledModule;
+use crate::backend::{CompiledModule, Context};
 use crate::module::{Module, ParseError, SourceFile};
 use crate::resolver::exporttable::GlobalExportTable;
 use crate::resolver::resolutionerror::ResolutionError;
@@ -35,6 +35,7 @@ impl CompilerError {
 }
 
 pub struct Compiler {
+    context: Context,
     exportTable: GlobalExportTable,
     threads: Vec<JoinHandle<Option<CompiledModule>>>,
 }
@@ -47,12 +48,14 @@ impl Compiler {
         let jobManager = Arc::new(Mutex::new(JobManager::Source(exportTable.to_owned(), sourceVec)));
 
         let mut handleVec = Vec::new();
+        let context = Context::new();
 
         for _ in 0..threadCount {
-            handleVec.push(CompileJob::new(jobManager.to_owned()));
+            handleVec.push(CompileJob::new(context.to_owned(), jobManager.to_owned()));
         }
 
         return Self {
+            context,
             exportTable,
             threads: handleVec,
         };
@@ -76,13 +79,13 @@ impl Compiler {
         };
     }
 
-    fn compileSecondStage(resolver: Resolver) -> Result<CompiledModule, CompilerError> {
+    fn compileSecondStage(context: Context, resolver: Resolver) -> Result<CompiledModule, CompilerError> {
         // second step of resolution (resolving all symbols using export tables (global and local))
         let resolved = resolver.getResolvedAST().map_err(|error| CompilerError::ResolutionError(error))?;
         info!("Resolved: {resolved:?}");
         // convert resolved ast into binary
         // source should be completely valid at this point; all errors should have been resolved
-        return Ok(CompiledModule::new(resolved));
+        return Ok(CompiledModule::new(context, resolved));
     }
 
     pub fn getCompiledResult(self) -> Option<CompiledModule> {
@@ -97,7 +100,7 @@ impl Compiler {
             }
         }
 
-        let mut compiledModule = CompiledModule::empty();
+        let mut compiledModule = CompiledModule::empty(self.context);
         for handle in self.threads {
             compiledModule.merge(handle.join().expect("compile job panicked")?);
         }
@@ -116,16 +119,16 @@ struct CompileJob {
 }
 
 impl CompileJob {
-    fn new(jobManager: Arc<Mutex<JobManager>>) -> JoinHandle<Option<CompiledModule>> {
+    fn new(context: Context, jobManager: Arc<Mutex<JobManager>>) -> JoinHandle<Option<CompiledModule>> {
         return Builder::new().spawn(|| {
             return Self {
                 error: false,
                 resolverVec: Vec::new(),
-            }.start(jobManager);
+            }.start(context, jobManager);
         }).expect("unable to create thread for job");
     }
 
-    fn start(mut self, jobManager: Arc<Mutex<JobManager>>) -> Option<CompiledModule> {
+    fn start(mut self, context: Context, jobManager: Arc<Mutex<JobManager>>) -> Option<CompiledModule> {
         loop {
             let mut lock = jobManager.lock();
             if let JobManager::Source(exportTable, source) = lock.deref_mut() {
@@ -139,7 +142,7 @@ impl CompileJob {
                 }
             }
             debug_assert!(matches!(lock.deref(), JobManager::Complete));
-            return self.getCompiledResult();
+            return self.getCompiledResult(context);
         }
     }
 
@@ -157,13 +160,13 @@ impl CompileJob {
         self.getValue(Compiler::compileFirstStage(exportTable, source), |s, value| s.resolverVec.push(value));
     }
 
-    fn getCompiledResult(mut self) -> Option<CompiledModule> {
+    fn getCompiledResult(mut self, context: Context) -> Option<CompiledModule> {
         let mut resolverVec = Vec::new();
         resolverVec.append(&mut self.resolverVec);
 
-        let mut compiledModule = CompiledModule::empty();
+        let mut compiledModule = CompiledModule::empty(context.to_owned());
         for resolver in resolverVec {
-            self.getValue(Compiler::compileSecondStage(resolver), |_, value| {
+            self.getValue(Compiler::compileSecondStage(context.to_owned(), resolver), |_, value| {
                 compiledModule.merge(value);
             });
         }

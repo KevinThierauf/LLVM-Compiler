@@ -1,8 +1,10 @@
 use std::ffi::CString;
 
-use llvm_sys::core::{LLVMBuildAdd, LLVMBuildAnd, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildSRem, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstReal, LLVMFloatType, LLVMInt1Type, LLVMInt32Type, LLVMInt8Type};
-use llvm_sys::prelude::{LLVMBool, LLVMBuilderRef, LLVMValueRef};
+use llvm_sys::core::{LLVMBuildAdd, LLVMBuildAnd, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildICmp, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildSRem, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstReal, LLVMFloatType, LLVMInt1Type, LLVMInt32Type, LLVMInt8Type};
+use llvm_sys::LLVMIntPredicate;
+use llvm_sys::prelude::{LLVMBool, LLVMValueRef};
 
+use crate::backend::CompiledModule;
 use crate::module::Operator;
 use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 use crate::resolver::resolvedast::resolvedoperator::ResolvedOperator;
@@ -11,8 +13,8 @@ use crate::resolver::resolvedast::statement::Statement;
 use crate::resolver::typeinfo::primitive::float::FLOAT_TYPE;
 use crate::resolver::typeinfo::primitive::integer::INTEGER_TYPE;
 
-unsafe fn getOperands(builder: LLVMBuilderRef, operands: Vec<ResolvedExpr>) -> Vec<LLVMValueRef> {
-    return operands.into_iter().map(|expr| emitExpr(builder, expr)).collect::<Vec<_>>();
+unsafe fn getOperands(module: &mut CompiledModule, operands: Vec<ResolvedExpr>) -> Vec<LLVMValueRef> {
+    return operands.into_iter().map(|expr| emitExpr(module, expr)).collect::<Vec<_>>();
 }
 
 fn expectVariable(resolvedExpr: ResolvedExpr) -> ResolvedVariable {
@@ -23,10 +25,10 @@ fn expectVariable(resolvedExpr: ResolvedExpr) -> ResolvedVariable {
     };
 }
 
-unsafe fn emitOperatorAssign(builder: LLVMBuilderRef, mut operands: Vec<ResolvedExpr>, operator: Operator) -> LLVMValueRef {
+unsafe fn emitOperatorAssign(module: &mut CompiledModule, mut operands: Vec<ResolvedExpr>, operator: Operator) -> LLVMValueRef {
     let value = operands.remove(1);
     let variable = expectVariable(operands.remove(0));
-    return emitExpr(builder, ResolvedExpr::Operator(Box::new(ResolvedOperator {
+    return emitExpr(module, ResolvedExpr::Operator(Box::new(ResolvedOperator {
         operator: Operator::AssignEq,
         operands: Box::new([ResolvedExpr::Variable(variable.to_owned()), ResolvedExpr::Operator(Box::new(ResolvedOperator {
             operator,
@@ -37,7 +39,7 @@ unsafe fn emitOperatorAssign(builder: LLVMBuilderRef, mut operands: Vec<Resolved
     })));
 }
 
-unsafe fn emitExpr(builder: LLVMBuilderRef, expr: ResolvedExpr) -> LLVMValueRef {
+unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValueRef {
     return match expr {
         ResolvedExpr::Operator(expr) => {
             let mut operands = Vec::from(expr.operands);
@@ -48,7 +50,7 @@ unsafe fn emitExpr(builder: LLVMBuilderRef, expr: ResolvedExpr) -> LLVMValueRef 
             match expr.operator {
                 Operator::Increment => {
                     if expr.expressionType == INTEGER_TYPE {
-                        emitExpr(builder, ResolvedExpr::Operator(Box::new(ResolvedOperator {
+                        emitExpr(module, ResolvedExpr::Operator(Box::new(ResolvedOperator {
                             operator: Operator::PlusAssign,
                             operands: Box::new([operands.remove(0), ResolvedExpr::LiteralInteger(1)]),
                             expressionType: INTEGER_TYPE.to_owned(),
@@ -59,7 +61,7 @@ unsafe fn emitExpr(builder: LLVMBuilderRef, expr: ResolvedExpr) -> LLVMValueRef 
                 }
                 Operator::Decrement => {
                     if expr.expressionType == INTEGER_TYPE {
-                        emitExpr(builder, ResolvedExpr::Operator(Box::new(ResolvedOperator {
+                        emitExpr(module, ResolvedExpr::Operator(Box::new(ResolvedOperator {
                             operator: Operator::DivAssign,
                             operands: Box::new([operands.remove(0), ResolvedExpr::LiteralInteger(1)]),
                             expressionType: INTEGER_TYPE.to_owned(),
@@ -69,97 +71,103 @@ unsafe fn emitExpr(builder: LLVMBuilderRef, expr: ResolvedExpr) -> LLVMValueRef 
                     }
                 }
                 Operator::Not => {
-                    let operands = getOperands(builder, operands);
-                    LLVMBuildNot(builder, operands[0], name)
+                    let operands = getOperands(module, operands);
+                    LLVMBuildNot(module.builder, operands[0], name)
                 }
                 Operator::Plus => {
-                    let operands = getOperands(builder, operands);
+                    let operands = getOperands(module, operands);
                     if expr.expressionType == INTEGER_TYPE {
-                        LLVMBuildAdd(builder, operands[0], operands[1], name)
+                        LLVMBuildAdd(module.builder, operands[0], operands[1], name)
                     } else if expr.expressionType == FLOAT_TYPE {
-                        LLVMBuildFAdd(builder, operands[0], operands[1], name)
+                        LLVMBuildFAdd(module.builder, operands[0], operands[1], name)
                     } else {
                         panic!("unknown arithmetic type {:?}", expr.expressionType);
                     }
                 }
                 Operator::Minus => {
-                    let operands = getOperands(builder, operands);
+                    let operands = getOperands(module, operands);
                     if expr.expressionType == INTEGER_TYPE {
-                        LLVMBuildSub(builder, operands[0], operands[1], name)
+                        LLVMBuildSub(module.builder, operands[0], operands[1], name)
                     } else if expr.expressionType == FLOAT_TYPE {
-                        LLVMBuildFSub(builder, operands[0], operands[1], name)
+                        LLVMBuildFSub(module.builder, operands[0], operands[1], name)
                     } else {
                         panic!("unknown arithmetic type {:?}", expr.expressionType);
                     }
                 }
                 Operator::Mult => {
-                    let operands = getOperands(builder, operands);
+                    let operands = getOperands(module, operands);
                     if expr.expressionType == INTEGER_TYPE {
-                        LLVMBuildMul(builder, operands[0], operands[1], name)
+                        LLVMBuildMul(module.builder, operands[0], operands[1], name)
                     } else if expr.expressionType == FLOAT_TYPE {
-                        LLVMBuildFMul(builder, operands[0], operands[1], name)
+                        LLVMBuildFMul(module.builder, operands[0], operands[1], name)
                     } else {
                         panic!("unknown arithmetic type {:?}", expr.expressionType);
                     }
                 }
                 Operator::Div => {
-                    let operands = getOperands(builder, operands);
+                    let operands = getOperands(module, operands);
                     if expr.expressionType == INTEGER_TYPE {
-                        LLVMBuildExactSDiv(builder, operands[0], operands[1], name)
+                        LLVMBuildExactSDiv(module.builder, operands[0], operands[1], name)
                     } else if expr.expressionType == FLOAT_TYPE {
-                        LLVMBuildFDiv(builder, operands[0], operands[1], name)
+                        LLVMBuildFDiv(module.builder, operands[0], operands[1], name)
                     } else {
                         panic!("unknown arithmetic type {:?}", expr.expressionType);
                     }
                 }
                 Operator::Mod => {
-                    let operands = getOperands(builder, operands);
+                    let operands = getOperands(module, operands);
                     if expr.expressionType == INTEGER_TYPE {
-                        LLVMBuildSRem(builder, operands[0], operands[1], name)
+                        LLVMBuildSRem(module.builder, operands[0], operands[1], name)
                     } else {
                         panic!("unknown type for mod {:?}", expr.expressionType);
                     }
                 }
                 Operator::PlusAssign => {
-                    emitOperatorAssign(builder, operands, Operator::Plus)
+                    emitOperatorAssign(module, operands, Operator::Plus)
                 }
                 Operator::MinusAssign => {
-                    emitOperatorAssign(builder, operands, Operator::Minus)
+                    emitOperatorAssign(module, operands, Operator::Minus)
                 }
                 Operator::MultAssign => {
-                    emitOperatorAssign(builder, operands, Operator::Mult)
+                    emitOperatorAssign(module, operands, Operator::Mult)
                 }
                 Operator::DivAssign => {
-                    emitOperatorAssign(builder, operands, Operator::Div)
+                    emitOperatorAssign(module, operands, Operator::Div)
                 }
                 Operator::ModAssign => {
-                    emitOperatorAssign(builder, operands, Operator::Mod)
+                    emitOperatorAssign(module, operands, Operator::Mod)
                 }
                 Operator::And => {
-                    let operands = getOperands(builder, operands);
-                    LLVMBuildAnd(builder, operands[0], operands[1], name)
+                    let operands = getOperands(module, operands);
+                    LLVMBuildAnd(module.builder, operands[0], operands[1], name)
                 }
                 Operator::Or => {
-                    let operands = getOperands(builder, operands);
-                    LLVMBuildOr(builder, operands[0], operands[1], name)
+                    let operands = getOperands(module, operands);
+                    LLVMBuildOr(module.builder, operands[0], operands[1], name)
                 }
                 Operator::Greater => {
-                    todo!()
+                    let operands = getOperands(module, operands);
+                    LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntSGT, operands[0], operands[1], name)
                 }
                 Operator::Less => {
-                    todo!()
+                    let operands = getOperands(module, operands);
+                    LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntSLT, operands[0], operands[1], name)
                 }
                 Operator::GreaterEq => {
-                    todo!()
+                    let operands = getOperands(module, operands);
+                    LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntSGE, operands[0], operands[1], name)
                 }
                 Operator::LessEq => {
-                    todo!()
+                    let operands = getOperands(module, operands);
+                    LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntSLE, operands[0], operands[1], name)
                 }
                 Operator::CompareEq => {
-                    todo!()
+                    let operands = getOperands(module, operands);
+                    LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntEQ, operands[0], operands[1], name)
                 }
                 Operator::CompareNotEq => {
-                    todo!()
+                    let operands = getOperands(module, operands);
+                    LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntNE, operands[0], operands[1], name)
                 }
                 Operator::AssignEq => {
                     todo!()
@@ -198,15 +206,12 @@ unsafe fn emitExpr(builder: LLVMBuilderRef, expr: ResolvedExpr) -> LLVMValueRef 
             LLVMConstInt(LLVMInt32Type(), expr as _, LLVMBool::from(true))
         }
         ResolvedExpr::LiteralString(expr) => {
-            LLVMConstArray(LLVMInt8Type(), expr.chars().into_iter().map(|c| emitExpr(builder, ResolvedExpr::LiteralChar(c as _))).collect::<Vec<_>>().as_mut_ptr(), expr.len() as _)
-        }
-        ResolvedExpr::LiteralVoid => {
-            todo!()
+            LLVMConstArray(LLVMInt8Type(), expr.chars().into_iter().map(|c| emitExpr(module, ResolvedExpr::LiteralChar(c as _))).collect::<Vec<_>>().as_mut_ptr(), expr.len() as _)
         }
     };
 }
 
-pub(in super) unsafe fn emit(builder: LLVMBuilderRef, statement: Statement) -> LLVMValueRef {
+pub(in super) unsafe fn emit(module: &mut CompiledModule, statement: Statement) -> LLVMValueRef {
     return match statement {
         Statement::If(statement) => {
             todo!()
@@ -218,7 +223,7 @@ pub(in super) unsafe fn emit(builder: LLVMBuilderRef, statement: Statement) -> L
             todo!()
         }
         Statement::Expr(expr) => {
-            emitExpr(builder, expr)
+            emitExpr(module, expr)
         }
         Statement::FunctionDefinition(statement) => {
             todo!()

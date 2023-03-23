@@ -7,7 +7,6 @@ pub mod literalfloat;
 pub mod literalstring;
 pub mod literalinteger;
 pub mod literalchar;
-pub mod literalvoid;
 
 pub trait LiteralType: ExprType {
 }

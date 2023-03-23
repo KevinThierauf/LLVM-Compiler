@@ -653,9 +653,6 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
         Expr::LiteralString(expr) => {
             ResolvedExpr::LiteralString(expr.fileRange.getSourceInRange().to_owned())
         }
-        Expr::LiteralVoid(_) => {
-            ResolvedExpr::LiteralVoid
-        }
         Expr::LiteralArray(expr) => {
             resolutionHandler.errorVec.push(ResolutionError::Unsupported(expr.range.getStartPos(), "unsupported array literal".to_owned()));
             return None;

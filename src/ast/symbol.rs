@@ -97,7 +97,6 @@ impl<'a> From<&'a Symbol> for SymbolDiscriminants {
                     Expr::LiteralFloat(_) => SymbolDiscriminants::LiteralFloat,
                     Expr::LiteralInteger(_) => SymbolDiscriminants::LiteralInteger,
                     Expr::LiteralString(_) => SymbolDiscriminants::LiteralString,
-                    Expr::LiteralVoid(_) => SymbolDiscriminants::LiteralVoid,
                     Expr::LiteralTuple(_) => SymbolDiscriminants::LiteralTuple,
                     Expr::ConstructorCall(_) => SymbolDiscriminants::ConstructorCall,
                 }

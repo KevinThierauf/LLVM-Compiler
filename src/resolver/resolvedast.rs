@@ -25,4 +25,8 @@ impl ResolvedAST {
             resolved
         };
     }
+
+    pub fn take(self) -> ResolvedScope {
+        return self.resolved;
+    }
 }

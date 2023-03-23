@@ -11,7 +11,6 @@ use crate::ast::symbol::expr::literal::literalfloat::LiteralFloat;
 use crate::ast::symbol::expr::literal::literalinteger::LiteralInteger;
 use crate::ast::symbol::expr::literal::literalstring::LiteralString;
 use crate::ast::symbol::expr::literal::literaltuple::LiteralTuple;
-use crate::ast::symbol::expr::literal::literalvoid::LiteralVoid;
 use crate::ast::symbol::expr::operatorexpr::OperatorExpr;
 use crate::ast::symbol::expr::variabledeclaration::VariableDeclarationExpr;
 use crate::ast::symbol::expr::variableexpr::VariableExpr;
@@ -41,7 +40,6 @@ pub enum Expr {
     LiteralFloat(LiteralFloat),
     LiteralInteger(LiteralInteger),
     LiteralString(LiteralString),
-    LiteralVoid(LiteralVoid),
     LiteralTuple(LiteralTuple),
 }
 
@@ -66,7 +64,6 @@ impl Expr {
             Expr::LiteralFloat(v) => v,
             Expr::LiteralInteger(v) => v,
             Expr::LiteralString(v) => v,
-            Expr::LiteralVoid(v) => v,
             Expr::LiteralTuple(v) => v,
             Expr::ConstructorCall(v) => v,
         };

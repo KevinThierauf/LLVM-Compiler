@@ -16,7 +16,6 @@ use crate::resolver::typeinfo::primitive::float::FLOAT_TYPE;
 use crate::resolver::typeinfo::primitive::integer::INTEGER_TYPE;
 use crate::resolver::typeinfo::string::STRING_TYPE;
 use crate::resolver::typeinfo::Type;
-use crate::resolver::typeinfo::void::VOID_TYPE;
 
 pub trait ResolvedExprType: StatementType + Debug {
     fn getExpressionType(&self) -> Type;
@@ -66,7 +65,6 @@ pub enum ResolvedExpr {
     LiteralFloat(f64),
     LiteralInteger(i64),
     LiteralString(String),
-    LiteralVoid,
 }
 
 impl ResolvedExpr {
@@ -96,10 +94,6 @@ impl ResolvedExpr {
             }
             ResolvedExpr::LiteralString(_) => {
                 static LITERAL_RESOLVED_EXPR_TYPE: Lazy<ResolvedExprTypeValue> = Lazy::new(|| ResolvedExprTypeValue::new(STRING_TYPE.to_owned(), false));
-                return LITERAL_RESOLVED_EXPR_TYPE.deref();
-            }
-            ResolvedExpr::LiteralVoid => {
-                static LITERAL_RESOLVED_EXPR_TYPE: Lazy<ResolvedExprTypeValue> = Lazy::new(|| ResolvedExprTypeValue::new(VOID_TYPE.to_owned(), false));
                 return LITERAL_RESOLVED_EXPR_TYPE.deref();
             }
         };
