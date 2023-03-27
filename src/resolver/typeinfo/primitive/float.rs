@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use llvm_sys::core::LLVMFloatType;
+use llvm_sys::prelude::LLVMTypeRef;
 use once_cell::sync::Lazy;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
@@ -28,6 +30,12 @@ impl TypeInfo for Float {
 
     fn getStaticSize(&self) -> u32 {
         return self.bitWidth;
+    }
+
+    fn getLLVMType(&self) -> LLVMTypeRef {
+        return unsafe {
+            LLVMFloatType()
+        };
     }
 
     fn getExplicitConversions(&self) -> &Vec<Type> {

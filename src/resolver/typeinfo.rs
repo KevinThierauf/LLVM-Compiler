@@ -5,6 +5,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use hashbrown::HashMap;
+use llvm_sys::prelude::LLVMTypeRef;
 use once_cell::sync::Lazy;
 
 pub mod tuple;
@@ -22,6 +23,7 @@ pub struct TypeProperty {
 pub trait TypeInfo: Sync + Send {
     fn getTypeName(&self) -> &str;
     fn getStaticSize(&self) -> u32;
+    fn getLLVMType(&self) -> LLVMTypeRef;
     fn getExplicitConversions(&self) -> &Vec<Type>;
 
     fn getPropertyMap(&self) -> &HashMap<String, TypeProperty> {

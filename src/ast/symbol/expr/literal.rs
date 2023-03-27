@@ -8,5 +8,4 @@ pub mod literalstring;
 pub mod literalinteger;
 pub mod literalchar;
 
-pub trait LiteralType: ExprType {
-}
+pub trait LiteralType: ExprType {}

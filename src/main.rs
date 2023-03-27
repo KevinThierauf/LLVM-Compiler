@@ -2,9 +2,11 @@
 
 use std::process::exit;
 use std::time::SystemTime;
+
 use log::info;
 
 use compiler::Compiler;
+
 use crate::backend::link::{checkLinkerPath, getExecutableExtension};
 
 pub mod module;
@@ -15,9 +17,9 @@ pub mod backend;
 
 fn main() {
     simple_logger::init().unwrap();
-    
+
     checkLinkerPath();
-    
+
     let sourcePathVec = vec!["examples/source.txt".to_owned()];
     let start = SystemTime::now();
     let compiler = Compiler::new(None, sourcePathVec);

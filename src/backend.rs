@@ -1,11 +1,12 @@
 use std::ffi::CString;
 use std::path::Path;
 use std::sync::Arc;
+use hashbrown::HashMap;
 
 use llvm_sys::bit_writer::LLVMWriteBitcodeToFile;
-use llvm_sys::core::{LLVMContextCreate, LLVMContextDispose, LLVMCreateBuilderInContext, LLVMDisposeBuilder, LLVMDisposeModule, LLVMModuleCreateWithNameInContext};
+use llvm_sys::core::{LLVMContextCreate, LLVMContextDispose, LLVMCreateBasicBlockInContext, LLVMCreateBuilderInContext, LLVMDisposeBuilder, LLVMDisposeModule, LLVMModuleCreateWithNameInContext, LLVMPositionBuilderAtEnd};
 use llvm_sys::linker::LLVMLinkModules2;
-use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMModuleRef};
+use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMModuleRef, LLVMValueRef};
 use parking_lot::Mutex;
 
 use crate::backend::emit::emit;
@@ -56,6 +57,8 @@ pub struct CompiledModule {
     context: Context,
     module: LLVMModuleRef,
     builder: LLVMBuilderRef,
+    blockStack: Vec<LLVMBasicBlockRef>,
+    variableMap: HashMap<usize, LLVMValueRef>,
 }
 
 unsafe impl Send for CompiledModule {}
@@ -83,11 +86,19 @@ impl CompiledModule {
     pub fn empty(context: Context) -> Self {
         unsafe {
             let llvmContext = context.0.lock_arc();
+            let builder = LLVMCreateBuilderInContext(llvmContext.context);
             let name = CString::new("CompiledModule").unwrap();
+            let module = LLVMModuleCreateWithNameInContext(name.as_ptr(), llvmContext.context);
+
+            let blockName = CString::new("main").unwrap();
+            let basicBlock = LLVMCreateBasicBlockInContext(llvmContext.context, blockName.as_ptr());
+            LLVMPositionBuilderAtEnd(builder, basicBlock);
+
             return CompiledModule {
                 context,
-                module: LLVMModuleCreateWithNameInContext(name.as_ptr(), llvmContext.context),
-                builder: LLVMCreateBuilderInContext(llvmContext.context),
+                module,
+                builder,
+                blockStack: vec![basicBlock],
             };
         }
     }

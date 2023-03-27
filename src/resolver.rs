@@ -3,6 +3,7 @@ use std::mem::swap;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
@@ -398,6 +399,8 @@ impl Scope {
     }
 
     fn declareVariable(&mut self, name: &str, ty: Type, errorVec: &mut Vec<ResolutionError>) -> Option<ResolvedVariable> {
+        static NEXT_VARIABLE_ID: AtomicUsize = AtomicUsize::new(0);
+        
         return match self.variableMap.entry(name.to_owned()) {
             Entry::Occupied(_) => {
                 errorVec.push(ResolutionError::ConflictingVariable(name.to_owned(), format!("found multiple variables in scope with same variable name")));
@@ -407,6 +410,7 @@ impl Scope {
                 Some(v.insert(ResolvedVariable {
                     variableName: name.to_owned(),
                     ty,
+                    id: NEXT_VARIABLE_ID.fetch_add(1, Ordering::Relaxed),
                 }).to_owned())
             }
         };
@@ -541,18 +545,18 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
                         BOOLEAN_TYPE.to_owned()
                     }
                     Operator::Plus | Operator::Minus | Operator::Mult | Operator::Div => {
-                            // arithmetic type
-                            if exprVec[0].getExpressionType() != exprVec[1].getExpressionType() {
-                                resolutionHandler.errorVec.push(ResolutionError::ExpectedType(exprVec[0].getExpressionType(), exprVec[1].getExpressionType(), format!("mismatched types for operation expression")));
-                                return None;
-                            }
+                        // arithmetic type
+                        if exprVec[0].getExpressionType() != exprVec[1].getExpressionType() {
+                            resolutionHandler.errorVec.push(ResolutionError::ExpectedType(exprVec[0].getExpressionType(), exprVec[1].getExpressionType(), format!("mismatched types for operation expression")));
+                            return None;
+                        }
 
-                            if !exprVec[0].getExpressionType().isArithmeticType() {
-                                resolutionHandler.errorVec.push(ResolutionError::InvalidOperationType(exprVec[0].getExpressionType(), format!("cannot apply {:?} operator to non-arithmetic type", expr.operator)));
-                                return None;
-                            }
+                        if !exprVec[0].getExpressionType().isArithmeticType() {
+                            resolutionHandler.errorVec.push(ResolutionError::InvalidOperationType(exprVec[0].getExpressionType(), format!("cannot apply {:?} operator to non-arithmetic type", expr.operator)));
+                            return None;
+                        }
 
-                            exprVec[0].getExpressionType()
+                        exprVec[0].getExpressionType()
                     }
                     Operator::ModAssign | Operator::DivAssign | Operator::MultAssign | Operator::MinusAssign | Operator::PlusAssign => {
                         // arithmetic type
@@ -570,7 +574,7 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
                             resolutionHandler.errorVec.push(ResolutionError::InvalidOperation(format!("value is not assignable")));
                             return None;
                         }
-                        
+
                         if matches!(exprVec[0], ResolvedExpr::VariableDeclaration(_)) {
                             resolutionHandler.errorVec.push(ResolutionError::InvalidOperation(format!("cannot apply operator {:?} to variable declaration", expr.operator)));
                             return None;
@@ -626,9 +630,13 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
         }
         Expr::VariableDeclaration(expr) => {
             if let Some(explicitType) = &expr.explicitType {
-                getResolvedType(resolutionHandler, explicitType, |resolutionHandler, ty| Some(ResolvedExpr::VariableDeclaration(VariableDeclare {
-                    ty: resolutionHandler.scope.declareVariable(expr.variableName.getToken().getSourceRange().getSourceInRange(), ty, &mut resolutionHandler.errorVec)?.ty,
-                }))).flatten()?
+                getResolvedType(resolutionHandler, explicitType, |resolutionHandler, ty| {
+                    let variable = resolutionHandler.scope.declareVariable(expr.variableName.getToken().getSourceRange().getSourceInRange(), ty, &mut resolutionHandler.errorVec)?;
+                    Some(ResolvedExpr::VariableDeclaration(VariableDeclare {
+                        ty: variable.ty,
+                        id: variable.id,
+                    }))
+                }).flatten()?
             } else {
                 resolutionHandler.errorVec.push(ResolutionError::Unsupported(expr.range.getStartPos(), format!("type inference not supported (for variable '{}')", expr.variableName.getToken().getSourceRange().getSourceInRange())));
                 return None;

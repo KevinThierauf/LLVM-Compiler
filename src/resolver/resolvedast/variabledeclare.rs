@@ -5,6 +5,7 @@ use crate::resolver::typeinfo::Type;
 #[derive(Debug)]
 pub struct VariableDeclare {
     pub ty: Type,
+    pub id: usize,
 }
 
 impl StatementType for VariableDeclare {}

@@ -5,7 +5,7 @@ use crate::resolver::resolvedast::statement::StatementType;
 #[derive(Debug)]
 pub struct ResolvedFunctionDefinition {
     pub function: Function,
-    pub scope: ResolvedScope
+    pub scope: ResolvedScope,
 }
 
 impl StatementType for ResolvedFunctionDefinition {}

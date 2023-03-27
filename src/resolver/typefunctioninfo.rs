@@ -25,7 +25,7 @@ impl TypeFunctionInfo {
             }
         };
     }
-    
+
     pub fn getFunction(&self, name: &str) -> Option<Function> {
         return self.functionMap.get(name).map(|v| v.to_owned());
     }

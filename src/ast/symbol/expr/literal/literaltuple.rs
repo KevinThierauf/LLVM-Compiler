@@ -21,5 +21,4 @@ impl SymbolType for LiteralTuple {
     }
 }
 
-impl LiteralType for LiteralTuple {
-}
+impl LiteralType for LiteralTuple {}

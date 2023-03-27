@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use llvm_sys::core::LLVMInt1Type;
+use llvm_sys::prelude::LLVMTypeRef;
 use once_cell::sync::Lazy;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
@@ -17,6 +19,12 @@ impl TypeInfo for Boolean {
 
     fn getStaticSize(&self) -> u32 {
         return 1;
+    }
+
+    fn getLLVMType(&self) -> LLVMTypeRef {
+        return unsafe {
+            LLVMInt1Type()
+        };
     }
 
     fn getExplicitConversions(&self) -> &Vec<Type> {

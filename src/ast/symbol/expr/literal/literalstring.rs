@@ -22,5 +22,4 @@ impl SymbolType for LiteralString {
     }
 }
 
-impl LiteralType for LiteralString {
-}
+impl LiteralType for LiteralString {}

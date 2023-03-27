@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::process::{Command, exit};
+
 use log::error;
 
 const LLC_PATH: &str = "llc.exe";

@@ -1,13 +1,16 @@
 use std::ffi::CString;
 
-use llvm_sys::core::{LLVMBuildAdd, LLVMBuildAnd, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildICmp, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildSRem, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstReal, LLVMFloatType, LLVMInt1Type, LLVMInt32Type, LLVMInt8Type};
+use llvm_sys::analysis::{LLVMVerifierFailureAction, LLVMVerifyFunction};
+use llvm_sys::core::{LLVMAddFunction, LLVMAppendBasicBlockInContext, LLVMBasicBlockAsValue, LLVMBuildAdd, LLVMBuildAlloca, LLVMBuildAnd, LLVMBuildCall2, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildICmp, LLVMBuildLoad2, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildRet, LLVMBuildRetVoid, LLVMBuildSRem, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstNull, LLVMConstReal, LLVMCreateBasicBlockInContext, LLVMFloatType, LLVMFunctionType, LLVMInt1Type, LLVMInt32Type, LLVMInt8Type, LLVMPositionBuilderAtEnd};
 use llvm_sys::LLVMIntPredicate;
-use llvm_sys::prelude::{LLVMBool, LLVMValueRef};
+use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMBool, LLVMContextRef, LLVMTypeRef, LLVMValueRef};
 
 use crate::backend::CompiledModule;
 use crate::module::Operator;
+use crate::resolver::function::Function;
 use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 use crate::resolver::resolvedast::resolvedoperator::ResolvedOperator;
+use crate::resolver::resolvedast::resolvedscope::ResolvedScope;
 use crate::resolver::resolvedast::resolvedvariable::ResolvedVariable;
 use crate::resolver::resolvedast::statement::Statement;
 use crate::resolver::typeinfo::primitive::float::FLOAT_TYPE;
@@ -179,16 +182,25 @@ unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValue
             }
         }
         ResolvedExpr::FunctionCall(expr) => {
-            todo!()
+            let functionName = expr.function.name.to_owned();
+            let (function, functionType) = getFunctionValue(module, expr.function);
+            let mut operands = getOperands(module, expr.argVec);
+            let name = CString::new(format!("Call{}", functionName)).unwrap();
+            LLVMBuildCall2(module.builder, functionType, function, operands.as_mut_ptr(), operands.len() as _, name.as_ptr())
         }
         ResolvedExpr::ConstructorCall(expr) => {
             todo!()
         }
         ResolvedExpr::VariableDeclaration(expr) => {
-            todo!()
+            let name = CString::new(format!("Allocate{}", expr.ty.getTypeName())).unwrap();
+            let value = LLVMBuildAlloca(module.builder, expr.ty.getLLVMType(), name.as_ptr());
+            let _v = module.variableMap.insert(expr.id, value);
+            debug_assert!(_v.is_none());
+            value
         }
         ResolvedExpr::Variable(expr) => {
-            todo!()
+            let name = CString::new(format!("Load{}", expr.ty.getTypeName())).unwrap();
+            LLVMBuildLoad2(module.builder, expr.ty.getLLVMType(), *module.variableMap.get(&expr.id).unwrap(), name.as_ptr())
         }
         ResolvedExpr::Property(expr) => {
             todo!()
@@ -211,6 +223,37 @@ unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValue
     };
 }
 
+unsafe fn emitScope(module: &mut CompiledModule, scope: ResolvedScope, basicBlockCallback: impl FnOnce(LLVMContextRef, &CString) -> LLVMBasicBlockRef) -> LLVMBasicBlockRef {
+    let contextLock = module.context.0.lock_arc();
+    let context = contextLock.context;
+    let blockName = CString::new("block").unwrap();
+    let basicBlock = basicBlockCallback(context, &blockName);
+    drop(contextLock);
+
+    module.blockStack.push(basicBlock);
+    LLVMPositionBuilderAtEnd(module.builder, basicBlock);
+    for statement in scope.statementVec {
+        emit(module, statement);
+    }
+    let _v = module.blockStack.pop().unwrap();
+    debug_assert_eq!(_v, basicBlock);
+    LLVMPositionBuilderAtEnd(module.builder, *module.blockStack.last().unwrap());
+
+    return basicBlock;
+}
+
+unsafe fn getFunctionValue(module: &mut CompiledModule, function: Function) -> (LLVMValueRef, LLVMTypeRef) {
+    let mut parameterTypes = function.parameters.iter().map(|v| v.ty.getLLVMType()).collect::<Vec<_>>();
+    let functionType = LLVMFunctionType(
+        function.returnType.getLLVMType(),
+        parameterTypes.as_mut_ptr(), parameterTypes.len() as _,
+        0,
+    );
+    let functionName = CString::new(function.name.as_str()).unwrap();
+    let function = LLVMAddFunction(module.module, functionName.as_ptr(), functionType);
+    return (function, functionType);
+}
+
 pub(in super) unsafe fn emit(module: &mut CompiledModule, statement: Statement) -> LLVMValueRef {
     return match statement {
         Statement::If(statement) => {
@@ -220,19 +263,29 @@ pub(in super) unsafe fn emit(module: &mut CompiledModule, statement: Statement) 
             todo!()
         }
         Statement::Return(statement) => {
-            todo!()
+            if let Some(expr) = statement.expr {
+                LLVMBuildRet(module.builder, emitExpr(module, expr))
+            } else {
+                LLVMBuildRetVoid(module.builder)
+            }
         }
         Statement::Expr(expr) => {
             emitExpr(module, expr)
         }
         Statement::FunctionDefinition(statement) => {
-            todo!()
+            let function = getFunctionValue(module, statement.function).0;
+            emitScope(module, statement.scope, |context, name| LLVMAppendBasicBlockInContext(context, function, name.as_ptr()));
+            LLVMVerifyFunction(function, LLVMVerifierFailureAction::LLVMAbortProcessAction);
+            function
         }
         Statement::Scope(statement) => {
-            todo!()
+            return LLVMBasicBlockAsValue(emitScope(module, statement, |context, name| LLVMCreateBasicBlockInContext(context, name.as_ptr())));
         }
         Statement::Multiple(statementVec) => {
-            todo!()
+            for statement in statementVec {
+                emit(module, statement);
+            }
+            LLVMConstNull(LLVMInt8Type())
         }
     };
 }

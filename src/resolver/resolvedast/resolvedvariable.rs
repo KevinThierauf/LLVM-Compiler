@@ -6,6 +6,7 @@ use crate::resolver::typeinfo::Type;
 pub struct ResolvedVariable {
     pub variableName: String,
     pub ty: Type,
+    pub id: usize,
 }
 
 impl StatementType for ResolvedVariable {}

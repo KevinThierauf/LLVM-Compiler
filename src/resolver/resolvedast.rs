@@ -16,7 +16,7 @@ pub mod resolvedscope;
 
 #[derive(Debug)]
 pub struct ResolvedAST {
-    resolved: ResolvedScope
+    resolved: ResolvedScope,
 }
 
 impl ResolvedAST {

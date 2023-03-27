@@ -28,5 +28,4 @@ impl SymbolType for LiteralInteger {
     }
 }
 
-impl LiteralType for LiteralInteger {
-}
+impl LiteralType for LiteralInteger {}

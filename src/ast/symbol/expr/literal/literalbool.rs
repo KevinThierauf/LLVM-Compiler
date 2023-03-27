@@ -37,5 +37,4 @@ impl ExprType for LiteralBool {
     }
 }
 
-impl LiteralType for LiteralBool {
-}
+impl LiteralType for LiteralBool {}

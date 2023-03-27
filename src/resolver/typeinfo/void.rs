@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use llvm_sys::core::LLVMVoidType;
+use llvm_sys::prelude::LLVMTypeRef;
 use once_cell::sync::Lazy;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
@@ -17,6 +19,12 @@ impl TypeInfo for Void {
 
     fn getStaticSize(&self) -> u32 {
         return 0;
+    }
+
+    fn getLLVMType(&self) -> LLVMTypeRef {
+        return unsafe {
+            LLVMVoidType()
+        };
     }
 
     fn getExplicitConversions(&self) -> &Vec<Type> {

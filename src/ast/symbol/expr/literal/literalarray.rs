@@ -28,5 +28,4 @@ impl SymbolType for LiteralArray {
     }
 }
 
-impl LiteralType for LiteralArray {
-}
+impl LiteralType for LiteralArray {}

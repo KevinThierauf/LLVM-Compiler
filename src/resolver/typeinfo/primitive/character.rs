@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use llvm_sys::core::LLVMInt8Type;
+use llvm_sys::prelude::LLVMTypeRef;
 use once_cell::sync::Lazy;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
@@ -17,6 +19,12 @@ impl TypeInfo for Character {
 
     fn getStaticSize(&self) -> u32 {
         return 4;
+    }
+
+    fn getLLVMType(&self) -> LLVMTypeRef {
+        return unsafe {
+            LLVMInt8Type()
+        };
     }
 
     fn getExplicitConversions(&self) -> &Vec<Type> {

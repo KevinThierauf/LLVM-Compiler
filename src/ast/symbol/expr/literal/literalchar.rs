@@ -28,5 +28,4 @@ impl SymbolType for LiteralChar {
     }
 }
 
-impl LiteralType for LiteralChar {
-}
+impl LiteralType for LiteralChar {}

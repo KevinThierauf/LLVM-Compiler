@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
+use llvm_sys::prelude::LLVMTypeRef;
 
 use crate::ast::visibility::Visibility;
 use crate::resolver::resolutionerror::ResolutionError;
@@ -43,7 +44,7 @@ impl ClassTypeInfo {
                 });
                 Ok(())
             }
-        }
+        };
     }
 
     pub fn build(self) -> Type {
@@ -58,6 +59,10 @@ impl TypeInfo for ClassTypeInfo {
 
     fn getStaticSize(&self) -> u32 {
         return self.staticSize;
+    }
+
+    fn getLLVMType(&self) -> LLVMTypeRef {
+        todo!()
     }
 
     fn getExplicitConversions(&self) -> &Vec<Type> {

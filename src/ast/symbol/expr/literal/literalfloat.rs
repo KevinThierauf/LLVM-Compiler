@@ -28,5 +28,4 @@ impl SymbolType for LiteralFloat {
     }
 }
 
-impl LiteralType for LiteralFloat {
-}
+impl LiteralType for LiteralFloat {}
