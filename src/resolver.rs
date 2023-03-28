@@ -325,9 +325,15 @@ impl ResolutionHandler {
                 return getResolvedExpression(self, &symbol.condition, Box::new(|resolutionHandler, expr| {
                     return if expr.getExpressionType() == BOOLEAN_TYPE.to_owned() {
                         let statement = resolutionHandler.resolve(symbol.symbol.deref())?;
+                        let elseStatement = if let Some(elseSym) = &symbol.elseExpr {
+                            Some(resolutionHandler.resolve(&elseSym.symbol)?)
+                        } else {
+                            None
+                        };
                         Some(Statement::If(Box::new(IfStatement {
                             condition: expr,
                             statement,
+                            elseStatement 
                         })))
                     } else {
                         resolutionHandler.errorVec.push(ResolutionError::ExpectedType(BOOLEAN_TYPE.to_owned(), expr.getExpressionType(), format!("expected boolean conditional for if statement")));

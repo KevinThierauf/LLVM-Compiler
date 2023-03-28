@@ -1,17 +1,25 @@
 use std::ffi::CString;
 use std::path::Path;
+use std::ptr::null_mut;
 use std::sync::Arc;
-use hashbrown::HashMap;
 
+use hashbrown::HashMap;
+use llvm_sys::analysis::{LLVMVerifierFailureAction, LLVMVerifyModule};
 use llvm_sys::bit_writer::LLVMWriteBitcodeToFile;
 use llvm_sys::core::{LLVMContextCreate, LLVMContextDispose, LLVMCreateBasicBlockInContext, LLVMCreateBuilderInContext, LLVMDisposeBuilder, LLVMDisposeModule, LLVMModuleCreateWithNameInContext, LLVMPositionBuilderAtEnd};
 use llvm_sys::linker::LLVMLinkModules2;
 use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMModuleRef, LLVMValueRef};
 use parking_lot::Mutex;
+use crate::ast::visibility::Visibility;
 
 use crate::backend::emit::emit;
 use crate::backend::link::linkExecutable;
+use crate::resolver::function::Function;
 use crate::resolver::resolvedast::ResolvedAST;
+use crate::resolver::resolvedast::resolvedfunctiondefinition::ResolvedFunctionDefinition;
+use crate::resolver::resolvedast::resolvedscope::ResolvedScope;
+use crate::resolver::resolvedast::statement::Statement;
+use crate::resolver::typeinfo::void::VOID_TYPE;
 
 pub mod emit;
 pub mod link;
@@ -75,10 +83,17 @@ impl Drop for CompiledModule {
 impl CompiledModule {
     pub fn new(context: Context, resolved: ResolvedAST) -> Self {
         let mut module = Self::empty(context);
-        for statement in resolved.take().statementVec {
-            unsafe {
-                emit(&mut module, statement);
-            }
+        let mainFunction = ResolvedFunctionDefinition {
+            function: Function::new("main".to_owned(), Visibility::Public, VOID_TYPE.to_owned(), Vec::new()),
+            scope: ResolvedScope {
+                statementVec: resolved.take().statementVec,
+            },
+        };
+        unsafe {
+            emit(&mut module, Statement::FunctionDefinition(mainFunction));
+        }
+        unsafe {
+            LLVMVerifyModule(module.module, LLVMVerifierFailureAction::LLVMAbortProcessAction, null_mut());
         }
         return module;
     }
@@ -99,6 +114,7 @@ impl CompiledModule {
                 module,
                 builder,
                 blockStack: vec![basicBlock],
+                variableMap: HashMap::new(),
             };
         }
     }

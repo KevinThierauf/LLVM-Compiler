@@ -1,20 +1,21 @@
-Structure structure = new Structure()
+//Structure structure = new Structure()
 
-structure.method()
+//structure.method()
 
 int variable = 6
 int variable2 = 7
 
 int function() {
-    print("Hello, World!")
+    //print("Hello, World!")
     return 0
 }
 
 if function() == 0 {
-    print("success")
+    //print("success")
 }
 
 int var = 0
+/*
 outer:
 while var < 10 {
     var++
@@ -33,6 +34,7 @@ class Structure {
         // do nothing
     }
 }
+*/
 
 /*
     Block comment

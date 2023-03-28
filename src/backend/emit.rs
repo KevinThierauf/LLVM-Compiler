@@ -1,7 +1,7 @@
 use std::ffi::CString;
 
 use llvm_sys::analysis::{LLVMVerifierFailureAction, LLVMVerifyFunction};
-use llvm_sys::core::{LLVMAddFunction, LLVMAppendBasicBlockInContext, LLVMBasicBlockAsValue, LLVMBuildAdd, LLVMBuildAlloca, LLVMBuildAnd, LLVMBuildCall2, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildICmp, LLVMBuildLoad2, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildRet, LLVMBuildRetVoid, LLVMBuildSRem, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstNull, LLVMConstReal, LLVMCreateBasicBlockInContext, LLVMFloatType, LLVMFunctionType, LLVMInt1Type, LLVMInt32Type, LLVMInt8Type, LLVMPositionBuilderAtEnd};
+use llvm_sys::core::{LLVMAddFunction, LLVMAppendBasicBlockInContext, LLVMBasicBlockAsValue, LLVMBuildAdd, LLVMBuildAlloca, LLVMBuildAnd, LLVMBuildBr, LLVMBuildCall2, LLVMBuildCondBr, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildICmp, LLVMBuildLoad2, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildRet, LLVMBuildRetVoid, LLVMBuildSRem, LLVMBuildStore, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstNull, LLVMConstReal, LLVMCreateBasicBlockInContext, LLVMFloatType, LLVMFunctionType, LLVMInt1Type, LLVMInt32Type, LLVMInt8Type, LLVMPositionBuilderAtEnd};
 use llvm_sys::LLVMIntPredicate;
 use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMBool, LLVMContextRef, LLVMTypeRef, LLVMValueRef};
 
@@ -173,7 +173,8 @@ unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValue
                     LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntNE, operands[0], operands[1], name)
                 }
                 Operator::AssignEq => {
-                    todo!()
+                    let operands = getOperands(module, operands);
+                    LLVMBuildStore(module.builder, operands[1], operands[0])
                 }
                 Operator::Cast | Operator::Dot | Operator::Range | Operator::Ellipsis | Operator::Colon | Operator::ErrorPropagation => {
                     // should have been previously handled/removed
@@ -193,14 +194,14 @@ unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValue
         }
         ResolvedExpr::VariableDeclaration(expr) => {
             let name = CString::new(format!("Allocate{}", expr.ty.getTypeName())).unwrap();
-            let value = LLVMBuildAlloca(module.builder, expr.ty.getLLVMType(), name.as_ptr());
+            let value = LLVMBuildAlloca(module.builder, expr.ty.getLLVMType(module.context.0.lock_arc().context), name.as_ptr());
             let _v = module.variableMap.insert(expr.id, value);
             debug_assert!(_v.is_none());
             value
         }
         ResolvedExpr::Variable(expr) => {
             let name = CString::new(format!("Load{}", expr.ty.getTypeName())).unwrap();
-            LLVMBuildLoad2(module.builder, expr.ty.getLLVMType(), *module.variableMap.get(&expr.id).unwrap(), name.as_ptr())
+            LLVMBuildLoad2(module.builder, expr.ty.getLLVMType(module.context.0.lock_arc().context), *module.variableMap.get(&expr.id).unwrap(), name.as_ptr())
         }
         ResolvedExpr::Property(expr) => {
             todo!()
@@ -223,7 +224,7 @@ unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValue
     };
 }
 
-unsafe fn emitScope(module: &mut CompiledModule, scope: ResolvedScope, basicBlockCallback: impl FnOnce(LLVMContextRef, &CString) -> LLVMBasicBlockRef) -> LLVMBasicBlockRef {
+unsafe fn emitScope(module: &mut CompiledModule, scope: ResolvedScope, basicBlockCallback: impl FnOnce(LLVMContextRef, &CString) -> LLVMBasicBlockRef, endCallback: impl FnOnce(&mut CompiledModule, LLVMBasicBlockRef)) -> LLVMBasicBlockRef {
     let contextLock = module.context.0.lock_arc();
     let context = contextLock.context;
     let blockName = CString::new("block").unwrap();
@@ -235,20 +236,32 @@ unsafe fn emitScope(module: &mut CompiledModule, scope: ResolvedScope, basicBloc
     for statement in scope.statementVec {
         emit(module, statement);
     }
-    let _v = module.blockStack.pop().unwrap();
-    debug_assert_eq!(_v, basicBlock);
-    LLVMPositionBuilderAtEnd(module.builder, *module.blockStack.last().unwrap());
+    let last = module.blockStack.pop().unwrap();
+    endCallback(module, last);
+    LLVMPositionBuilderAtEnd(module.builder, last);
 
     return basicBlock;
 }
 
+fn wrapInScope(statement: Statement) -> ResolvedScope {
+    return match statement {
+        Statement::Scope(resolved) => resolved,
+        _ => ResolvedScope {
+            statementVec: vec![statement],
+        }
+    };
+}
+
 unsafe fn getFunctionValue(module: &mut CompiledModule, function: Function) -> (LLVMValueRef, LLVMTypeRef) {
-    let mut parameterTypes = function.parameters.iter().map(|v| v.ty.getLLVMType()).collect::<Vec<_>>();
+    let contextLock = module.context.0.lock_arc();
+    let context = contextLock.context;
+    let mut parameterTypes = function.parameters.iter().map(|v| v.ty.getLLVMType(context)).collect::<Vec<_>>();
     let functionType = LLVMFunctionType(
-        function.returnType.getLLVMType(),
+        function.returnType.getLLVMType(context),
         parameterTypes.as_mut_ptr(), parameterTypes.len() as _,
         0,
     );
+    drop(contextLock);
     let functionName = CString::new(function.name.as_str()).unwrap();
     let function = LLVMAddFunction(module.module, functionName.as_ptr(), functionType);
     return (function, functionType);
@@ -257,7 +270,25 @@ unsafe fn getFunctionValue(module: &mut CompiledModule, function: Function) -> (
 pub(in super) unsafe fn emit(module: &mut CompiledModule, statement: Statement) -> LLVMValueRef {
     return match statement {
         Statement::If(statement) => {
-            todo!()
+            let contextLock = module.context.0.lock_arc();
+            let context = contextLock.context;
+            let name = CString::new("IfEnd").unwrap();
+            let endBlock = LLVMCreateBasicBlockInContext(context, name.as_ptr());
+            *module.blockStack.last_mut().unwrap() = endBlock;
+            drop(contextLock);
+
+            let ifBlock = emitScope(module, wrapInScope(statement.statement), |context, name| LLVMCreateBasicBlockInContext(context, name.as_ptr()), |module, _| {
+                LLVMBuildBr(module.builder, endBlock);
+            });
+            let elseBlock = emitScope(module, wrapInScope(statement.elseStatement.unwrap_or(Statement::Scope(ResolvedScope {
+                statementVec: Vec::new(),
+            }))), |context, name| LLVMCreateBasicBlockInContext(context, name.as_ptr()), |module, _| {
+                LLVMBuildBr(module.builder, endBlock);
+            });
+
+            let name = CString::new("if").unwrap();
+            let condition = LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntNE, emitExpr(module, statement.condition), emitExpr(module, ResolvedExpr::LiteralInteger(0)), name.as_ptr());
+            LLVMBuildCondBr(module.builder, condition, ifBlock, elseBlock)
         }
         Statement::While(statement) => {
             todo!()
@@ -274,12 +305,14 @@ pub(in super) unsafe fn emit(module: &mut CompiledModule, statement: Statement) 
         }
         Statement::FunctionDefinition(statement) => {
             let function = getFunctionValue(module, statement.function).0;
-            emitScope(module, statement.scope, |context, name| LLVMAppendBasicBlockInContext(context, function, name.as_ptr()));
+            emitScope(module, statement.scope, |context, name| LLVMAppendBasicBlockInContext(context, function, name.as_ptr()), |_, _| {});
             LLVMVerifyFunction(function, LLVMVerifierFailureAction::LLVMAbortProcessAction);
             function
         }
         Statement::Scope(statement) => {
-            return LLVMBasicBlockAsValue(emitScope(module, statement, |context, name| LLVMCreateBasicBlockInContext(context, name.as_ptr())));
+            return LLVMBasicBlockAsValue(emitScope(module, statement, |context, name| LLVMCreateBasicBlockInContext(context, name.as_ptr()), |module, next| {
+                LLVMBuildBr(module.builder, next);
+            }));
         }
         Statement::Multiple(statementVec) => {
             for statement in statementVec {

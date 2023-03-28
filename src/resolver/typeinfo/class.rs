@@ -2,18 +2,20 @@ use std::sync::Arc;
 
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
-use llvm_sys::prelude::LLVMTypeRef;
+use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 
 use crate::ast::visibility::Visibility;
 use crate::resolver::resolutionerror::ResolutionError;
 use crate::resolver::typeinfo::{Type, TypeInfo, TypeProperty};
 
+#[derive(Debug)]
 pub struct ClassField {
     pub visibility: Visibility,
     pub ty: Type,
     pub name: String,
 }
 
+#[derive(Debug)]
 pub struct ClassTypeInfo {
     name: String,
     staticSize: u32,
@@ -61,7 +63,7 @@ impl TypeInfo for ClassTypeInfo {
         return self.staticSize;
     }
 
-    fn getLLVMType(&self) -> LLVMTypeRef {
+    fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef {
         todo!()
     }
 

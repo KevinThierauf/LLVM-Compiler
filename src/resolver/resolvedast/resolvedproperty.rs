@@ -16,4 +16,8 @@ impl ResolvedExprType for ResolvedProperty {
     fn getExpressionType(&self) -> Type {
         return self.property.ty.to_owned();
     }
+
+    fn isAssignable(&self) -> bool {
+        return true;
+    }
 }

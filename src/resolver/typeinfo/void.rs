@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use llvm_sys::core::LLVMVoidType;
-use llvm_sys::prelude::LLVMTypeRef;
+use llvm_sys::core::{LLVMVoidType, LLVMVoidTypeInContext};
+use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 use once_cell::sync::Lazy;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
@@ -21,9 +21,9 @@ impl TypeInfo for Void {
         return 0;
     }
 
-    fn getLLVMType(&self) -> LLVMTypeRef {
+    fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef {
         return unsafe {
-            LLVMVoidType()
+            LLVMVoidTypeInContext(context)
         };
     }
 

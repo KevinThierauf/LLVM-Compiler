@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use llvm_sys::core::LLVMInt8Type;
-use llvm_sys::prelude::LLVMTypeRef;
+use llvm_sys::core::{LLVMInt8Type, LLVMInt8TypeInContext};
+use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 use once_cell::sync::Lazy;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
@@ -21,9 +21,9 @@ impl TypeInfo for Character {
         return 4;
     }
 
-    fn getLLVMType(&self) -> LLVMTypeRef {
+    fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef {
         return unsafe {
-            LLVMInt8Type()
+            LLVMInt8TypeInContext(context)
         };
     }
 

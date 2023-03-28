@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use llvm_sys::core::LLVMFloatType;
-use llvm_sys::prelude::LLVMTypeRef;
+use llvm_sys::core::{LLVMFloatType, LLVMFloatTypeInContext};
+use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 use once_cell::sync::Lazy;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
@@ -32,9 +32,9 @@ impl TypeInfo for Float {
         return self.bitWidth;
     }
 
-    fn getLLVMType(&self) -> LLVMTypeRef {
+    fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef {
         return unsafe {
-            LLVMFloatType()
+            LLVMFloatTypeInContext(context)
         };
     }
 
