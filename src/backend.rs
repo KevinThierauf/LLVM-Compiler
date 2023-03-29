@@ -6,9 +6,9 @@ use std::sync::Arc;
 use hashbrown::HashMap;
 use llvm_sys::analysis::{LLVMVerifierFailureAction, LLVMVerifyModule};
 use llvm_sys::bit_writer::LLVMWriteBitcodeToFile;
-use llvm_sys::core::{LLVMConstNull, LLVMContextCreate, LLVMContextDispose, LLVMCreateBuilderInContext, LLVMDisposeBuilder, LLVMDisposeModule, LLVMInt8TypeInContext, LLVMModuleCreateWithNameInContext, LLVMSetTarget};
+use llvm_sys::core::{LLVMConstNull, LLVMContextCreate, LLVMContextDispose, LLVMCreateBuilderInContext, LLVMDisposeBuilder, LLVMDisposeModule, LLVMInt8TypeInContext, LLVMModuleCreateWithNameInContext, LLVMPrintModuleToString, LLVMSetTarget};
 use llvm_sys::linker::LLVMLinkModules2;
-use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMModuleRef, LLVMValueRef};
+use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMModuleRef, LLVMTypeRef, LLVMValueRef};
 use llvm_sys::target::{LLVM_InitializeAllAsmParsers, LLVM_InitializeAllAsmPrinters, LLVM_InitializeAllTargetInfos, LLVM_InitializeAllTargetMCs, LLVM_InitializeAllTargets, LLVMSetModuleDataLayout};
 use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMCreateTargetDataLayout, LLVMCreateTargetMachine, LLVMGetDefaultTargetTriple, LLVMGetTargetFromTriple, LLVMRelocMode};
 use parking_lot::Mutex;
@@ -70,6 +70,7 @@ pub struct CompiledModule {
     builder: LLVMBuilderRef,
     blockStack: Vec<LLVMBasicBlockRef>,
     variableMap: HashMap<usize, LLVMValueRef>,
+    functionMap: HashMap<usize, (LLVMValueRef, LLVMTypeRef)>,
 }
 
 unsafe impl Send for CompiledModule {}
@@ -102,6 +103,7 @@ impl CompiledModule {
             emit(&mut module, null, Statement::FunctionDefinition(mainFunction));
         }
         unsafe {
+            println!("{}", CStr::from_ptr(LLVMPrintModuleToString(module.module)).to_str().unwrap());
             LLVMVerifyModule(module.module, LLVMVerifierFailureAction::LLVMAbortProcessAction, null_mut());
         }
         return module;
@@ -121,6 +123,7 @@ impl CompiledModule {
                 builder,
                 blockStack: Vec::new(),
                 variableMap: HashMap::new(),
+                functionMap: HashMap::new(),
             };
         }
     }

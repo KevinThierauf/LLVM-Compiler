@@ -3,6 +3,7 @@ use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
 
 use crate::ast::visibility::Visibility;
 use crate::resolver::typeinfo::Type;
@@ -18,6 +19,7 @@ pub struct FunctionImpl {
     pub returnType: Type,
     pub visibility: Visibility,
     pub parameters: Vec<Parameter>,
+    pub id: usize,
 }
 
 impl FunctionImpl {
@@ -31,12 +33,15 @@ pub struct Function(Arc<FunctionImpl>);
 
 impl Function {
     pub fn new(name: String, visibility: Visibility, returnType: Type, parameters: Vec<Parameter>) -> Self {
+        static NEXT_FUNCTION_ID: AtomicUsize = AtomicUsize::new(0);
+
         return Self {
             0: Arc::new(FunctionImpl {
                 name,
                 returnType,
                 visibility,
                 parameters,
+                id: NEXT_FUNCTION_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             }),
         };
     }

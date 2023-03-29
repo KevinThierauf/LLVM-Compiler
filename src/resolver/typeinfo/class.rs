@@ -6,6 +6,7 @@ use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 
 use crate::ast::visibility::Visibility;
 use crate::resolver::resolutionerror::ResolutionError;
+use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 use crate::resolver::typeinfo::{Type, TypeInfo, TypeProperty};
 
 #[derive(Debug)]
@@ -64,6 +65,10 @@ impl TypeInfo for ClassTypeInfo {
     }
 
     fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef {
+        todo!()
+    }
+
+    fn getDefaultValue(&self) -> ResolvedExpr {
         todo!()
     }
 

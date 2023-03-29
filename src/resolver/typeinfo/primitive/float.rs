@@ -3,6 +3,8 @@ use std::sync::Arc;
 use llvm_sys::core::LLVMFloatTypeInContext;
 use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 use once_cell::sync::Lazy;
+use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
+use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr::LiteralFloat;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
 use crate::resolver::typeinfo::primitive::integer::INTEGER_TYPE;
@@ -36,6 +38,10 @@ impl TypeInfo for Float {
         return unsafe {
             LLVMFloatTypeInContext(context)
         };
+    }
+
+    fn getDefaultValue(&self) -> ResolvedExpr {
+        return LiteralFloat(0.0);
     }
 
     fn getExplicitConversions(&self) -> &Vec<Type> {

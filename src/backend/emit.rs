@@ -1,7 +1,8 @@
 use std::ffi::CString;
+use hashbrown::hash_map::Entry;
 
 use llvm_sys::analysis::{LLVMVerifierFailureAction, LLVMVerifyFunction};
-use llvm_sys::core::{LLVMAddFunction, LLVMAddGlobal, LLVMAppendBasicBlockInContext, LLVMBasicBlockAsValue, LLVMBuildAdd, LLVMBuildAlloca, LLVMBuildAnd, LLVMBuildBr, LLVMBuildCall2, LLVMBuildCondBr, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildICmp, LLVMBuildLoad2, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildRet, LLVMBuildRetVoid, LLVMBuildSRem, LLVMBuildStore, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstNull, LLVMConstReal, LLVMFloatTypeInContext, LLVMFunctionType, LLVMGetInsertBlock, LLVMGetParam, LLVMInsertBasicBlockInContext, LLVMInt1TypeInContext, LLVMInt32TypeInContext, LLVMInt8TypeInContext, LLVMIsNull, LLVMPositionBuilderAtEnd};
+use llvm_sys::core::{LLVMAddFunction, LLVMAddGlobal, LLVMAppendBasicBlockInContext, LLVMBasicBlockAsValue, LLVMBuildAdd, LLVMBuildAlloca, LLVMBuildAnd, LLVMBuildBr, LLVMBuildCall2, LLVMBuildCondBr, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildICmp, LLVMBuildLoad2, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildRet, LLVMBuildRetVoid, LLVMBuildSRem, LLVMBuildStore, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstNull, LLVMConstReal, LLVMFloatTypeInContext, LLVMFunctionType, LLVMGetInsertBlock, LLVMGetParam, LLVMInsertBasicBlockInContext, LLVMInt1TypeInContext, LLVMInt32TypeInContext, LLVMInt8TypeInContext, LLVMIsNull, LLVMPositionBuilderAtEnd, LLVMSetInitializer};
 use llvm_sys::LLVMIntPredicate;
 use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMBool, LLVMContextRef, LLVMTypeRef, LLVMValueRef};
 
@@ -219,7 +220,9 @@ unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValue
         ResolvedExpr::VariableDeclaration(expr) => {
             let value = if expr.global {
                 let name = CString::new(format!("Global_{}", expr.ty.getTypeName())).unwrap();
-                LLVMAddGlobal(module.module, expr.ty.getLLVMType(module.context.0.try_lock_arc().unwrap().context), name.as_ptr())
+                let value = LLVMAddGlobal(module.module, expr.ty.getLLVMType(module.context.0.try_lock_arc().unwrap().context), name.as_ptr());
+                LLVMSetInitializer(value, emitExpr(module, expr.ty.getDefaultValue()));
+                value
             } else {
                 let name = CString::new(format!("Allocate_{}", expr.ty.getTypeName())).unwrap();
                 LLVMBuildAlloca(module.builder, expr.ty.getLLVMType(module.context.0.try_lock_arc().unwrap().context), name.as_ptr())
@@ -313,18 +316,25 @@ fn wrapInScope(statement: Statement) -> ResolvedScope {
 }
 
 unsafe fn getFunctionValue(module: &mut CompiledModule, function: Function) -> (LLVMValueRef, LLVMTypeRef) {
-    let contextLock = module.context.0.try_lock_arc().unwrap();
-    let context = contextLock.context;
-    let mut parameterTypes = function.parameters.iter().map(|v| v.ty.getLLVMType(context)).collect::<Vec<_>>();
-    let functionType = LLVMFunctionType(
-        function.returnType.getLLVMType(context),
-        parameterTypes.as_mut_ptr(), parameterTypes.len() as _,
-        0,
-    );
-    drop(contextLock);
-    let functionName = CString::new(function.name.as_str()).unwrap();
-    let function = LLVMAddFunction(module.module, functionName.as_ptr(), functionType);
-    return (function, functionType);
+    match module.functionMap.entry(function.id) {
+        Entry::Occupied(v) => {
+            *v.get()
+        }
+        Entry::Vacant(v) => {
+            let contextLock = module.context.0.try_lock_arc().unwrap();
+            let context = contextLock.context;
+            let mut parameterTypes = function.parameters.iter().map(|v| v.ty.getLLVMType(context)).collect::<Vec<_>>();
+            let functionType = LLVMFunctionType(
+                function.returnType.getLLVMType(context),
+                parameterTypes.as_mut_ptr(), parameterTypes.len() as _,
+                0,
+            );
+            drop(contextLock);
+            let functionName = CString::new(function.name.as_str()).unwrap();
+            let function = LLVMAddFunction(module.module, functionName.as_ptr(), functionType);
+            *v.insert((function, functionType))
+        }
+    }
 }
 
 pub(in super) unsafe fn emit(module: &mut CompiledModule, function: LLVMValueRef, statement: Statement) -> LLVMValueRef {

@@ -7,6 +7,7 @@ use std::sync::Arc;
 use hashbrown::HashMap;
 use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 use once_cell::sync::Lazy;
+use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 
 pub mod tuple;
 pub mod void;
@@ -24,6 +25,7 @@ pub trait TypeInfo: Sync + Send {
     fn getTypeName(&self) -> &str;
     fn getStaticSize(&self) -> u32;
     fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef;
+    fn getDefaultValue(&self) -> ResolvedExpr;
     fn getExplicitConversions(&self) -> &Vec<Type>;
 
     fn getPropertyMap(&self) -> &HashMap<String, TypeProperty> {

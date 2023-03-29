@@ -3,6 +3,7 @@ use std::sync::Arc;
 use llvm_sys::core::LLVMVoidTypeInContext;
 use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 use once_cell::sync::Lazy;
+use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
 
@@ -25,6 +26,10 @@ impl TypeInfo for Void {
         return unsafe {
             LLVMVoidTypeInContext(context)
         };
+    }
+
+    fn getDefaultValue(&self) -> ResolvedExpr {
+        unreachable!()
     }
 
     fn getExplicitConversions(&self) -> &Vec<Type> {

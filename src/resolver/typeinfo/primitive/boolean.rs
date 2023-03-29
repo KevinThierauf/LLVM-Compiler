@@ -3,6 +3,8 @@ use std::sync::Arc;
 use llvm_sys::core::LLVMInt1TypeInContext;
 use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 use once_cell::sync::Lazy;
+use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
+use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr::LiteralBool;
 
 use crate::resolver::typeinfo::{Type, TypeInfo};
 
@@ -25,6 +27,10 @@ impl TypeInfo for Boolean {
         return unsafe {
             LLVMInt1TypeInContext(context)
         };
+    }
+
+    fn getDefaultValue(&self) -> ResolvedExpr {
+        return LiteralBool(false);
     }
 
     fn getExplicitConversions(&self) -> &Vec<Type> {
