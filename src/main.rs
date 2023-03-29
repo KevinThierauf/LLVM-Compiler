@@ -25,9 +25,11 @@ fn main() {
     let compiler = Compiler::new(None, sourcePathVec);
 
     if let Some(module) = compiler.getCompiledResult() {
+        println!("compiled module");
         std::fs::create_dir_all("output").expect("failed to create output directory");
         let outputPath = "output/output".to_owned() + getExecutableExtension();
         module.writeExecutable(&outputPath);
+        println!("executable written");
 
         let end = SystemTime::now();
         info!("Compilation completed in {}ms", end.duration_since(start).unwrap().as_millis());

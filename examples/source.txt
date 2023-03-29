@@ -42,18 +42,22 @@ class Structure {
 
 // Line comment
 
+int variable4 = 1 + 3
+int variable5 = variable
 int variable3 = variable + variable2
+variable4 = 5
+variable4 += 5
 variable3 ++
 variable3++
 variable3 += 7
 
 void functionArgs(int a, int b, int c) {
-    int variable3 = variable + variable2
+    int variable3 = a + b
     variable3 ++
-    variable3++
-    variable3 += 7
+    // variable3++
+    // variable3 += 7
 }
 
 float f = 12.0
-functionArgs(1, 2, 3)
-functionArgs(1,2,3)
+//functionArgs(1, 2, 3)
+//functionArgs(1,2,3)

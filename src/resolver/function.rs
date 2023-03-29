@@ -7,6 +7,7 @@ use std::sync::Arc;
 use crate::ast::visibility::Visibility;
 use crate::resolver::typeinfo::Type;
 
+#[derive(Debug)]
 pub struct Parameter {
     pub ty: Type,
     pub name: String,

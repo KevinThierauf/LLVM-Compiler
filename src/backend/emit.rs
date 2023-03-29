@@ -1,7 +1,7 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 
 use llvm_sys::analysis::{LLVMVerifierFailureAction, LLVMVerifyFunction};
-use llvm_sys::core::{LLVMAddFunction, LLVMAppendBasicBlockInContext, LLVMBasicBlockAsValue, LLVMBuildAdd, LLVMBuildAlloca, LLVMBuildAnd, LLVMBuildBr, LLVMBuildCall2, LLVMBuildCondBr, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildICmp, LLVMBuildLoad2, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildRet, LLVMBuildRetVoid, LLVMBuildSRem, LLVMBuildStore, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstNull, LLVMConstReal, LLVMCreateBasicBlockInContext, LLVMFloatType, LLVMFunctionType, LLVMInt1Type, LLVMInt32Type, LLVMInt8Type, LLVMPositionBuilderAtEnd};
+use llvm_sys::core::{LLVMAddFunction, LLVMAddGlobal, LLVMAppendBasicBlockInContext, LLVMBasicBlockAsValue, LLVMBuildAdd, LLVMBuildAlloca, LLVMBuildAnd, LLVMBuildBr, LLVMBuildCall2, LLVMBuildCondBr, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildICmp, LLVMBuildLoad2, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildRet, LLVMBuildRetVoid, LLVMBuildSRem, LLVMBuildStore, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstNull, LLVMConstReal, LLVMFloatTypeInContext, LLVMFunctionType, LLVMGetInsertBlock, LLVMGetParam, LLVMInsertBasicBlockInContext, LLVMInt1TypeInContext, LLVMInt32TypeInContext, LLVMInt8TypeInContext, LLVMIsNull, LLVMPositionBuilderAtEnd, LLVMPrintValueToString};
 use llvm_sys::LLVMIntPredicate;
 use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMBool, LLVMContextRef, LLVMTypeRef, LLVMValueRef};
 
@@ -13,8 +13,10 @@ use crate::resolver::resolvedast::resolvedoperator::ResolvedOperator;
 use crate::resolver::resolvedast::resolvedscope::ResolvedScope;
 use crate::resolver::resolvedast::resolvedvariable::ResolvedVariable;
 use crate::resolver::resolvedast::statement::Statement;
+use crate::resolver::resolvedast::variabledeclare::VariableDeclare;
 use crate::resolver::typeinfo::primitive::float::FLOAT_TYPE;
 use crate::resolver::typeinfo::primitive::integer::INTEGER_TYPE;
+use crate::resolver::typeinfo::void::VOID_TYPE;
 
 unsafe fn getOperands(module: &mut CompiledModule, operands: Vec<ResolvedExpr>) -> Vec<LLVMValueRef> {
     return operands.into_iter().map(|expr| emitExpr(module, expr)).collect::<Vec<_>>();
@@ -31,15 +33,34 @@ fn expectVariable(resolvedExpr: ResolvedExpr) -> ResolvedVariable {
 unsafe fn emitOperatorAssign(module: &mut CompiledModule, mut operands: Vec<ResolvedExpr>, operator: Operator) -> LLVMValueRef {
     let value = operands.remove(1);
     let variable = expectVariable(operands.remove(0));
+    let expressionType = value.getExpressionType();
     return emitExpr(module, ResolvedExpr::Operator(Box::new(ResolvedOperator {
         operator: Operator::AssignEq,
         operands: Box::new([ResolvedExpr::Variable(variable.to_owned()), ResolvedExpr::Operator(Box::new(ResolvedOperator {
             operator,
             operands: Box::new([ResolvedExpr::Variable(variable), value]),
-            expressionType: INTEGER_TYPE.to_owned(),
+            expressionType: expressionType.to_owned(),
         }))]),
-        expressionType: INTEGER_TYPE.to_owned(),
+        expressionType,
     })));
+}
+
+unsafe fn getAssignValue(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValueRef {
+    return match expr {
+        ResolvedExpr::VariableDeclaration(v) => {
+            emitExpr(module, ResolvedExpr::VariableDeclaration(v))
+        }
+        ResolvedExpr::Variable(v) => {
+            *module.variableMap.get(&v.id).unwrap()
+        }
+        ResolvedExpr::Property(_) => {
+            todo!()
+        }
+        expr if expr.getResolvedExprType().isAssignable() => {
+            panic!("missing assignable branch");
+        }
+        _ => panic!("unexpected non-assignable value")
+    };
 }
 
 unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValueRef {
@@ -53,6 +74,8 @@ unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValue
             match expr.operator {
                 Operator::Increment => {
                     if expr.expressionType == INTEGER_TYPE {
+                        debug_assert_eq!(operands.len(), 1);
+                        debug_assert!(matches!(&operands[0], ResolvedExpr::Variable(_)));
                         emitExpr(module, ResolvedExpr::Operator(Box::new(ResolvedOperator {
                             operator: Operator::PlusAssign,
                             operands: Box::new([operands.remove(0), ResolvedExpr::LiteralInteger(1)]),
@@ -173,8 +196,9 @@ unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValue
                     LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntNE, operands[0], operands[1], name)
                 }
                 Operator::AssignEq => {
-                    let operands = getOperands(module, operands);
-                    LLVMBuildStore(module.builder, operands[1], operands[0])
+                    let value = emitExpr(module, operands.remove(1));
+                    let assignValue = getAssignValue(module, operands.remove(0));
+                    LLVMBuildStore(module.builder, value, assignValue)
                 }
                 Operator::Cast | Operator::Dot | Operator::Range | Operator::Ellipsis | Operator::Colon | Operator::ErrorPropagation => {
                     // should have been previously handled/removed
@@ -186,59 +210,95 @@ unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValue
             let functionName = expr.function.name.to_owned();
             let (function, functionType) = getFunctionValue(module, expr.function);
             let mut operands = getOperands(module, expr.argVec);
-            let name = CString::new(format!("Call{}", functionName)).unwrap();
+            let name = CString::new(format!("Call_{}", functionName)).unwrap();
             LLVMBuildCall2(module.builder, functionType, function, operands.as_mut_ptr(), operands.len() as _, name.as_ptr())
         }
         ResolvedExpr::ConstructorCall(expr) => {
             todo!()
         }
         ResolvedExpr::VariableDeclaration(expr) => {
-            let name = CString::new(format!("Allocate{}", expr.ty.getTypeName())).unwrap();
-            let value = LLVMBuildAlloca(module.builder, expr.ty.getLLVMType(module.context.0.lock_arc().context), name.as_ptr());
+            let value = if expr.global {
+                let name = CString::new(format!("Global_{}", expr.ty.getTypeName())).unwrap();
+                LLVMAddGlobal(module.module, expr.ty.getLLVMType(module.context.0.try_lock_arc().unwrap().context), name.as_ptr())
+            } else {
+                let name = CString::new(format!("Allocate_{}", expr.ty.getTypeName())).unwrap();
+                LLVMBuildAlloca(module.builder, expr.ty.getLLVMType(module.context.0.try_lock_arc().unwrap().context), name.as_ptr())
+            };
             let _v = module.variableMap.insert(expr.id, value);
             debug_assert!(_v.is_none());
             value
         }
         ResolvedExpr::Variable(expr) => {
-            let name = CString::new(format!("Load{}", expr.ty.getTypeName())).unwrap();
-            LLVMBuildLoad2(module.builder, expr.ty.getLLVMType(module.context.0.lock_arc().context), *module.variableMap.get(&expr.id).unwrap(), name.as_ptr())
+            let name = CString::new(format!("Load_{}", expr.ty.getTypeName())).unwrap();
+            LLVMBuildLoad2(module.builder, expr.ty.getLLVMType(module.context.0.try_lock_arc().unwrap().context), *module.variableMap.get(&expr.id).unwrap(), name.as_ptr())
         }
         ResolvedExpr::Property(expr) => {
             todo!()
         }
         ResolvedExpr::LiteralBool(expr) => {
-            LLVMConstInt(LLVMInt1Type(), if expr { 1 } else { 0 }, LLVMBool::from(false))
+            LLVMConstInt(LLVMInt1TypeInContext(module.context.0.try_lock_arc().unwrap().context), if expr { 1 } else { 0 }, LLVMBool::from(false))
         }
         ResolvedExpr::LiteralChar(expr) => {
-            LLVMConstInt(LLVMInt8Type(), expr as _, LLVMBool::from(true))
+            LLVMConstInt(LLVMInt8TypeInContext(module.context.0.try_lock_arc().unwrap().context), expr as _, LLVMBool::from(true))
         }
         ResolvedExpr::LiteralFloat(expr) => {
-            LLVMConstReal(LLVMFloatType(), 0.0)
+            LLVMConstReal(LLVMFloatTypeInContext(module.context.0.try_lock_arc().unwrap().context), expr)
         }
         ResolvedExpr::LiteralInteger(expr) => {
-            LLVMConstInt(LLVMInt32Type(), expr as _, LLVMBool::from(true))
+            LLVMConstInt(LLVMInt32TypeInContext(module.context.0.try_lock_arc().unwrap().context), expr as _, LLVMBool::from(true))
         }
         ResolvedExpr::LiteralString(expr) => {
-            LLVMConstArray(LLVMInt8Type(), expr.chars().into_iter().map(|c| emitExpr(module, ResolvedExpr::LiteralChar(c as _))).collect::<Vec<_>>().as_mut_ptr(), expr.len() as _)
+            LLVMConstArray(LLVMInt8TypeInContext(module.context.0.try_lock_arc().unwrap().context), expr.chars().into_iter().map(|c| emitExpr(module, ResolvedExpr::LiteralChar(c as _))).collect::<Vec<_>>().as_mut_ptr(), expr.len() as _)
         }
     };
 }
 
-unsafe fn emitScope(module: &mut CompiledModule, scope: ResolvedScope, basicBlockCallback: impl FnOnce(LLVMContextRef, &CString) -> LLVMBasicBlockRef, endCallback: impl FnOnce(&mut CompiledModule, LLVMBasicBlockRef)) -> LLVMBasicBlockRef {
-    let contextLock = module.context.0.lock_arc();
-    let context = contextLock.context;
-    let blockName = CString::new("block").unwrap();
-    let basicBlock = basicBlockCallback(context, &blockName);
-    drop(contextLock);
+enum Next {
+    None,
+    End,
+    Before(LLVMBasicBlockRef),
+    Block(LLVMBasicBlockRef),
+}
 
-    module.blockStack.push(basicBlock);
-    LLVMPositionBuilderAtEnd(module.builder, basicBlock);
-    for statement in scope.statementVec {
-        emit(module, statement);
+impl Next {
+    unsafe fn setBlock(&self, module: &mut CompiledModule, function: LLVMValueRef, name: &str) {
+        let name = CString::new(name).unwrap();
+        match self {
+            Next::End => {
+                let block = LLVMAppendBasicBlockInContext(module.context.0.try_lock_arc().unwrap().context, function, name.as_ptr());
+                LLVMPositionBuilderAtEnd(module.builder, block);
+            }
+            Next::Before(block) => {
+                let block = LLVMInsertBasicBlockInContext(module.context.0.try_lock_arc().unwrap().context, *block, name.as_ptr());
+                LLVMPositionBuilderAtEnd(module.builder, block);
+            }
+            Next::Block(block) => {
+                let block = *block;
+                LLVMPositionBuilderAtEnd(module.builder, block);
+            }
+            Next::None => {
+                // do nothing
+            }
+        }
     }
-    let last = module.blockStack.pop().unwrap();
-    endCallback(module, last);
-    LLVMPositionBuilderAtEnd(module.builder, last);
+}
+
+unsafe fn emitScope(module: &mut CompiledModule, branch: bool, name: &str, function: LLVMValueRef, scope: ResolvedScope, basicBlockCallback: impl FnOnce(&mut CompiledModule, LLVMContextRef, &CString) -> LLVMBasicBlockRef, startCallback: impl FnOnce(&mut CompiledModule), endCallback: impl FnOnce(&mut CompiledModule) -> Next) -> LLVMBasicBlockRef {
+    let contextLock = module.context.0.try_lock_arc().unwrap();
+    let context = contextLock.context;
+    let blockName = CString::new(name).unwrap();
+    let basicBlock = basicBlockCallback(module, context, &blockName);
+    drop(contextLock);
+    if branch {
+        LLVMBuildBr(module.builder, basicBlock);
+    }
+
+    LLVMPositionBuilderAtEnd(module.builder, basicBlock);
+    startCallback(module);
+    for statement in scope.statementVec {
+        emit(module, function, statement);
+    }
+    endCallback(module).setBlock(module, function, &format!("after_{name}"));
 
     return basicBlock;
 }
@@ -253,7 +313,7 @@ fn wrapInScope(statement: Statement) -> ResolvedScope {
 }
 
 unsafe fn getFunctionValue(module: &mut CompiledModule, function: Function) -> (LLVMValueRef, LLVMTypeRef) {
-    let contextLock = module.context.0.lock_arc();
+    let contextLock = module.context.0.try_lock_arc().unwrap();
     let context = contextLock.context;
     let mut parameterTypes = function.parameters.iter().map(|v| v.ty.getLLVMType(context)).collect::<Vec<_>>();
     let functionType = LLVMFunctionType(
@@ -267,28 +327,39 @@ unsafe fn getFunctionValue(module: &mut CompiledModule, function: Function) -> (
     return (function, functionType);
 }
 
-pub(in super) unsafe fn emit(module: &mut CompiledModule, statement: Statement) -> LLVMValueRef {
+pub(in super) unsafe fn emit(module: &mut CompiledModule, function: LLVMValueRef, statement: Statement) -> LLVMValueRef {
+    println!("> {statement:?}");
+    debug_assert!(LLVMIsNull(function) == 0 || matches!(statement, Statement::FunctionDefinition(_)));
     return match statement {
         Statement::If(statement) => {
-            let contextLock = module.context.0.lock_arc();
+            let condition = emitExpr(module, statement.condition);
+            let falseValue = emitExpr(module, ResolvedExpr::LiteralBool(false));
+            let contextLock = module.context.0.try_lock_arc().unwrap();
             let context = contextLock.context;
             let name = CString::new("IfEnd").unwrap();
-            let endBlock = LLVMCreateBasicBlockInContext(context, name.as_ptr());
-            *module.blockStack.last_mut().unwrap() = endBlock;
+            let endBlock = LLVMAppendBasicBlockInContext(context, function, name.as_ptr());
+
+            let name = CString::new("ifcmp").unwrap();
+            let condition = LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntNE, condition, falseValue, name.as_ptr());
+            let name = CString::new("if_block").unwrap();
+            let ifBlock = LLVMInsertBasicBlockInContext(context, endBlock, name.as_ptr());
+            let name = CString::new("else_block").unwrap();
+            let elseBlock = LLVMInsertBasicBlockInContext(context, endBlock, name.as_ptr());
+            let branch = LLVMBuildCondBr(module.builder, condition, ifBlock, elseBlock);
+
             drop(contextLock);
 
-            let ifBlock = emitScope(module, wrapInScope(statement.statement), |context, name| LLVMCreateBasicBlockInContext(context, name.as_ptr()), |module, _| {
+            emitScope(module, false, "if", function, wrapInScope(statement.statement), |_, _, _| ifBlock, |_| {}, |module| {
                 LLVMBuildBr(module.builder, endBlock);
+                Next::Block(endBlock)
             });
-            let elseBlock = emitScope(module, wrapInScope(statement.elseStatement.unwrap_or(Statement::Scope(ResolvedScope {
+            emitScope(module, false, "else", function, wrapInScope(statement.elseStatement.unwrap_or(Statement::Scope(ResolvedScope {
                 statementVec: Vec::new(),
-            }))), |context, name| LLVMCreateBasicBlockInContext(context, name.as_ptr()), |module, _| {
+            }))), |_, _, _| elseBlock, |_| {}, |module| {
                 LLVMBuildBr(module.builder, endBlock);
+                Next::Block(endBlock)
             });
-
-            let name = CString::new("if").unwrap();
-            let condition = LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntNE, emitExpr(module, statement.condition), emitExpr(module, ResolvedExpr::LiteralInteger(0)), name.as_ptr());
-            LLVMBuildCondBr(module.builder, condition, ifBlock, elseBlock)
+            branch
         }
         Statement::While(statement) => {
             todo!()
@@ -304,21 +375,47 @@ pub(in super) unsafe fn emit(module: &mut CompiledModule, statement: Statement) 
             emitExpr(module, expr)
         }
         Statement::FunctionDefinition(statement) => {
+            let functionReturnType = statement.function.returnType.to_owned();
+            let function = statement.function.to_owned();
+            let functionName = &function.name;
+            let parameters = &function.parameters;
             let function = getFunctionValue(module, statement.function).0;
-            emitScope(module, statement.scope, |context, name| LLVMAppendBasicBlockInContext(context, function, name.as_ptr()), |_, _| {});
+
+            emitScope(module, false, &format!("start_{}", functionName), function, statement.scope, |module, context, name| {
+                let block = LLVMAppendBasicBlockInContext(context, function, name.as_ptr());
+                module.blockStack.push(LLVMGetInsertBlock(module.builder));
+                block
+            }, |module| {
+                for index in 0..parameters.len() {
+                    let parameterVariable = emitExpr(module, ResolvedExpr::VariableDeclaration(VariableDeclare {
+                        ty: parameters[index].ty.to_owned(),
+                        id: statement.parameterVecId[index],
+                        global: false,
+                    }));
+                    let parameterValue = LLVMGetParam(function, index as _);
+                    LLVMBuildStore(module.builder, parameterValue, parameterVariable);
+                }
+            }, |module| {
+                if functionReturnType == VOID_TYPE {
+                    LLVMBuildRetVoid(module.builder);
+                }
+                let prev = module.blockStack.pop().unwrap();
+                Next::Block(prev)
+            });
+            println!("{:#?}", CStr::from_ptr(LLVMPrintValueToString(function)).to_str().unwrap());
             LLVMVerifyFunction(function, LLVMVerifierFailureAction::LLVMAbortProcessAction);
             function
         }
         Statement::Scope(statement) => {
-            return LLVMBasicBlockAsValue(emitScope(module, statement, |context, name| LLVMCreateBasicBlockInContext(context, name.as_ptr()), |module, next| {
-                LLVMBuildBr(module.builder, next);
+            return LLVMBasicBlockAsValue(emitScope(module, true, "Scope", function, statement, |_, context, name| LLVMAppendBasicBlockInContext(context, function, name.as_ptr()), |_| {}, |module| {
+                Next::End
             }));
         }
         Statement::Multiple(statementVec) => {
             for statement in statementVec {
-                emit(module, statement);
+                emit(module, function, statement);
             }
-            LLVMConstNull(LLVMInt8Type())
+            LLVMConstNull(LLVMInt8TypeInContext(module.context.0.try_lock_arc().unwrap().context))
         }
     };
 }

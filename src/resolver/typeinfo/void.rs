@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use llvm_sys::core::{LLVMVoidType, LLVMVoidTypeInContext};
+use llvm_sys::core::LLVMVoidTypeInContext;
 use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 use once_cell::sync::Lazy;
 

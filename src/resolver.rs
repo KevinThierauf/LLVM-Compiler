@@ -92,7 +92,7 @@ impl Resolver {
             scope: Scope::root(),
         };
 
-        return if let Some(statementVec) = resolutionHandler.resolveAll(self.ast.getSymbols().iter()) {
+        return if let Some(statementVec) = resolutionHandler.resolveAll(true, self.ast.getSymbols().iter()) {
             debug_assert!(resolutionHandler.errorVec.is_empty());
             Ok(ResolvedAST::new(ResolvedScope {
                 statementVec,
@@ -152,28 +152,31 @@ impl TopLevelResolver {
         // parameter scope
         resolutionHandler.pushScope();
 
-        fn resolveFunctionInner(selfType: Option<Type>, function: &Function, resolutionHandler: &mut ResolutionHandler, functionDefinition: &FunctionDefinitionSym) -> Option<ResolvedScope> {
+        fn resolveFunctionInner(selfType: Option<Type>, function: &Function, resolutionHandler: &mut ResolutionHandler, functionDefinition: &FunctionDefinitionSym) -> Option<(ResolvedScope, Vec<usize>)> {
+            let mut parameterVec = Vec::new();
             if let Some(selfType) = selfType {
-                resolutionHandler.scope.declareVariable("self", selfType, &mut resolutionHandler.errorVec)?;
+                parameterVec.push(resolutionHandler.scope.declareVariable("self", selfType, &mut resolutionHandler.errorVec)?.id);
             }
 
             for parameter in &function.parameters {
-                resolutionHandler.scope.declareVariable(&parameter.name, parameter.ty.to_owned(), &mut resolutionHandler.errorVec)?;
+                parameterVec.push(resolutionHandler.scope.declareVariable(&parameter.name, parameter.ty.to_owned(), &mut resolutionHandler.errorVec)?.id);
             }
             resolutionHandler.pushResolver(FunctionResolver(function.to_owned()));
             let resolvedScope = resolutionHandler.resolveBlock(&functionDefinition.functionBlock);
             resolutionHandler.popResolver();
             let resolvedScope = resolvedScope?;
             TopLevelResolver::checkReturnStatement(&mut resolutionHandler.errorVec, function.returnType.to_owned(), &resolvedScope.statementVec);
-            return Some(resolvedScope);
+            return Some((resolvedScope, parameterVec));
         }
 
-        let resolvedScope = resolveFunctionInner(selfType, &function, resolutionHandler, functionDefinition);
+        let inner = resolveFunctionInner(selfType, &function, resolutionHandler, functionDefinition);
         resolutionHandler.popScope();
+        let (resolvedScope, parameterVec) = inner?;
 
         return Some(ResolvedFunctionDefinition {
             function,
-            scope: resolvedScope?,
+            parameterVecId: parameterVec,
+            scope: resolvedScope,
         });
     }
 }
@@ -215,7 +218,7 @@ impl ResolverType for FunctionResolver {
         return match symbol {
             Symbol::Return(symbol) => {
                 let (statement, ty) = if let Some(expr) = &symbol.value {
-                    let resolved = resolutionHandler.resolveExpr(expr);
+                    let resolved = resolutionHandler.resolveExpr(expr, false);
                     if let Some(resolved) = resolved {
                         let ty = resolved.getExpressionType();
                         (Statement::Return(ReturnStatement {
@@ -243,10 +246,10 @@ impl ResolverType for FunctionResolver {
 }
 
 impl ResolutionHandler {
-    fn resolveAll<'a>(&mut self, symbols: impl Iterator<Item = &'a Symbol>) -> Option<Vec<Statement>> {
+    fn resolveAll<'a>(&mut self, global: bool, symbols: impl Iterator<Item = &'a Symbol>) -> Option<Vec<Statement>> {
         let mut statementVec = Vec::new();
         for symbol in symbols {
-            if let Some(statement) = self.resolve(symbol) {
+            if let Some(statement) = self.resolve(symbol, global) {
                 statementVec.push(statement);
             } else {
                 debug_assert!(!self.errorVec.is_empty(), "failed to resolve symbol {symbol:?} but no error provided");
@@ -283,18 +286,18 @@ impl ResolutionHandler {
 
     fn resolveBlock(&mut self, block: &BlockSym) -> Option<ResolvedScope> {
         self.pushScope();
-        let resolved = self.resolveAll(block.symbolVec.iter());
+        let resolved = self.resolveAll(false, block.symbolVec.iter());
         self.popScope();
         return Some(ResolvedScope {
             statementVec: resolved?,
         });
     }
 
-    fn resolveExpr(&mut self, expr: &Expr) -> Option<ResolvedExpr> {
-        Some(getResolvedExpression(self, expr, Box::new(|_, resolved| resolved))?)
+    fn resolveExpr(&mut self, expr: &Expr, global: bool) -> Option<ResolvedExpr> {
+        Some(getResolvedExpression(self, expr, global, Box::new(|_, resolved| resolved))?)
     }
 
-    fn resolve(&mut self, symbol: &Symbol) -> Option<Statement> {
+    fn resolve(&mut self, symbol: &Symbol, global: bool) -> Option<Statement> {
         match self.resolver.last().unwrap().to_owned().resolve(self, symbol) {
             Resolution::Ok(symbol) => return Some(symbol),
             Resolution::Err => return None,
@@ -308,9 +311,9 @@ impl ResolutionHandler {
                 Some(Statement::Scope(self.resolveBlock(symbol)?))
             }
             Symbol::While(symbol) => {
-                return getResolvedExpression(self, &symbol.condition, Box::new(|resolutionHandler, expr| {
+                return getResolvedExpression(self, &symbol.condition, global, Box::new(|resolutionHandler, expr| {
                     return if expr.getExpressionType() == BOOLEAN_TYPE.to_owned() {
-                        let statement = resolutionHandler.resolve(symbol.symbol.deref())?;
+                        let statement = resolutionHandler.resolve(symbol.symbol.deref(), global)?;
                         Some(Statement::While(Box::new(WhileStatement {
                             condition: expr,
                             statement,
@@ -322,11 +325,11 @@ impl ResolutionHandler {
                 })).flatten();
             }
             Symbol::IfSym(symbol) => {
-                return getResolvedExpression(self, &symbol.condition, Box::new(|resolutionHandler, expr| {
+                return getResolvedExpression(self, &symbol.condition, global, Box::new(|resolutionHandler, expr| {
                     return if expr.getExpressionType() == BOOLEAN_TYPE.to_owned() {
-                        let statement = resolutionHandler.resolve(symbol.symbol.deref())?;
+                        let statement = resolutionHandler.resolve(symbol.symbol.deref(), false)?;
                         let elseStatement = if let Some(elseSym) = &symbol.elseExpr {
-                            Some(resolutionHandler.resolve(&elseSym.symbol)?)
+                            Some(resolutionHandler.resolve(&elseSym.symbol, false)?)
                         } else {
                             None
                         };
@@ -342,7 +345,7 @@ impl ResolutionHandler {
                 })).flatten();
             }
             Symbol::Expr(expr) => {
-                Some(Statement::Expr(self.resolveExpr(expr)?))
+                Some(Statement::Expr(self.resolveExpr(expr, global)?))
             }
             Symbol::ClassDefinition(symbol) => {
                 self.errorVec.push(ResolutionError::Unexpected(symbol.getRange().getStartPos(), format!("unexpected class definition {:?}", self.resolver.last().unwrap())));
@@ -438,7 +441,7 @@ fn getResolvedFunctionCall(resolutionHandler: &mut ResolutionHandler, function: 
     return if functionCall.argVec.len() == function.parameters.len() {
         let mut argVec = Vec::new();
         for index in 0..functionCall.argVec.len() {
-            getResolvedExpression(resolutionHandler, &functionCall.argVec[index], Box::new(|resolutionHandler, expression| {
+            getResolvedExpression(resolutionHandler, &functionCall.argVec[index], false, Box::new(|resolutionHandler, expression| {
                 if expression.getExpressionType() == function.parameters[index].ty {
                     argVec.push(expression);
                 } else {
@@ -461,7 +464,7 @@ fn getResolvedFunctionCall(resolutionHandler: &mut ResolutionHandler, function: 
     };
 }
 
-fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr: &Expr, callback: Box<dyn 'a + FnOnce(&mut ResolutionHandler, ResolvedExpr) -> R>) -> Option<R> {
+fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr: &Expr, global: bool, callback: Box<dyn 'a + FnOnce(&mut ResolutionHandler, ResolvedExpr) -> R>) -> Option<R> {
     let resolved = match expr {
         Expr::ConstructorCall(expr) => {
             if !expr.argVec.is_empty() {
@@ -487,7 +490,7 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
         }
         Expr::Operator(expr) => {
             if let Operator::Dot = expr.operator {
-                let structure = getResolvedExpression(resolutionHandler, &expr.operands[0], Box::new(|_, resolved| resolved));
+                let structure = getResolvedExpression(resolutionHandler, &expr.operands[0], global, Box::new(|_, resolved| resolved));
                 debug_assert!(structure.is_some() || !resolutionHandler.errorVec.is_empty(), "failed to resolve {:?} but no error provided", &expr.operands[0]);
                 let structure = structure?;
                 let structureType = structure.getExpressionType();
@@ -527,7 +530,7 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
             } else {
                 let mut exprVec = Vec::new();
 
-                for expr in expr.operands.iter().map(|expr| getResolvedExpression(resolutionHandler, expr, Box::new(|_, resolved| resolved))).collect::<Vec<_>>() {
+                for expr in expr.operands.iter().map(|expr| getResolvedExpression(resolutionHandler, expr, global,Box::new(|_, resolved| resolved))).collect::<Vec<_>>() {
                     debug_assert!(expr.is_some() || !resolutionHandler.errorVec.is_empty());
                     exprVec.push(expr?);
                 }
@@ -641,6 +644,7 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
                     Some(ResolvedExpr::VariableDeclaration(VariableDeclare {
                         ty: variable.ty,
                         id: variable.id,
+                        global,
                     }))
                 }).flatten()?
             } else {

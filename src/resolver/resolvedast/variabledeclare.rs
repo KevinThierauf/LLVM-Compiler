@@ -6,6 +6,7 @@ use crate::resolver::typeinfo::Type;
 pub struct VariableDeclare {
     pub ty: Type,
     pub id: usize,
+    pub global: bool
 }
 
 impl StatementType for VariableDeclare {}
