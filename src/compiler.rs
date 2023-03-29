@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 
 use anyhow::Error;
-use log::{error, info};
+use log::error;
 use parking_lot::Mutex;
 
 use crate::ast::{AbstractSyntaxTree, ASTError};
@@ -67,10 +67,10 @@ impl Compiler {
         let sourceFile = SourceFile::new(PathBuf::from(source)).map_err(|error| CompilerError::ReadSourceError(error))?;
         // break source file down into tokens
         let module = Module::new(sourceFile).map_err(|error| CompilerError::TokenParseError(error))?;
-        info!("Module: {module:?}");
+        // info!("Module: {module:?}");
         // convert tokens into syntax expressions
         let ast = AbstractSyntaxTree::new(module).map_err(|error| CompilerError::ASTParseError(error))?;
-        info!("AST: {ast:?}");
+        // info!("AST: {ast:?}");
         // first step of resolution (identifying export symbols)
         // local exports will be resolved after all global symbols have been resolved
         // global exports will be resolved after all global symbols have been identified
@@ -83,7 +83,7 @@ impl Compiler {
     fn compileSecondStage(context: Context, resolver: Resolver) -> Result<CompiledModule, CompilerError> {
         // second step of resolution (resolving all symbols using export tables (global and local))
         let resolved = resolver.getResolvedAST().map_err(|error| CompilerError::ResolutionError(error))?;
-        info!("Resolved: {resolved:?}");
+        // info!("Resolved: {resolved:?}");
         // convert resolved ast into binary
         // source should be completely valid at this point; all errors should have been resolved
         return Ok(CompiledModule::new(context, resolved));

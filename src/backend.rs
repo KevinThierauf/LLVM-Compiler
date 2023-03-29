@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::path::Path;
 use std::ptr::null_mut;
 use std::sync::Arc;
@@ -6,9 +6,11 @@ use std::sync::Arc;
 use hashbrown::HashMap;
 use llvm_sys::analysis::{LLVMVerifierFailureAction, LLVMVerifyModule};
 use llvm_sys::bit_writer::LLVMWriteBitcodeToFile;
-use llvm_sys::core::{LLVMConstNull, LLVMContextCreate, LLVMContextDispose, LLVMCreateBuilderInContext, LLVMDisposeBuilder, LLVMDisposeModule, LLVMInt8TypeInContext, LLVMModuleCreateWithNameInContext};
+use llvm_sys::core::{LLVMConstNull, LLVMContextCreate, LLVMContextDispose, LLVMCreateBuilderInContext, LLVMDisposeBuilder, LLVMDisposeModule, LLVMInt8TypeInContext, LLVMModuleCreateWithNameInContext, LLVMSetTarget};
 use llvm_sys::linker::LLVMLinkModules2;
 use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMModuleRef, LLVMValueRef};
+use llvm_sys::target::{LLVM_InitializeAllAsmParsers, LLVM_InitializeAllAsmPrinters, LLVM_InitializeAllTargetInfos, LLVM_InitializeAllTargetMCs, LLVM_InitializeAllTargets, LLVMSetModuleDataLayout};
+use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMCreateTargetDataLayout, LLVMCreateTargetMachine, LLVMGetDefaultTargetTriple, LLVMGetTargetFromTriple, LLVMRelocMode};
 use parking_lot::Mutex;
 
 use crate::ast::visibility::Visibility;
@@ -62,6 +64,7 @@ impl Context {
 }
 
 pub struct CompiledModule {
+    entryName: String,
     context: Context,
     module: LLVMModuleRef,
     builder: LLVMBuilderRef,
@@ -85,10 +88,10 @@ impl Drop for CompiledModule {
 impl CompiledModule {
     pub fn new(context: Context, resolved: ResolvedAST) -> Self {
         let mut module = Self::empty(context);
-        let resolvedId = resolved.getId();
+        module.entryName = format!("main_{}", resolved.getId());
         let statementVec = resolved.take().statementVec;
         let mainFunction = ResolvedFunctionDefinition {
-            function: Function::new(format!("main_{}", resolvedId), Visibility::Public, VOID_TYPE.to_owned(), Vec::new()),
+            function: Function::new(module.entryName.to_owned(), Visibility::Public, VOID_TYPE.to_owned(), Vec::new()),
             parameterVecId: Vec::new(),
             scope: ResolvedScope {
                 statementVec,
@@ -112,6 +115,7 @@ impl CompiledModule {
             let module = LLVMModuleCreateWithNameInContext(name.as_ptr(), llvmContext.context);
 
             return CompiledModule {
+                entryName: String::new(),
                 context,
                 module,
                 builder,
@@ -122,6 +126,10 @@ impl CompiledModule {
     }
 
     pub fn merge(&mut self, mut other: CompiledModule) {
+        if self.entryName.is_empty() {
+            self.entryName = other.entryName.to_owned();
+        }
+
         if unsafe { LLVMLinkModules2(self.module, other.module) != 0 } {
             panic!("failed to link modules");
         }
@@ -131,6 +139,26 @@ impl CompiledModule {
     pub fn writeBitcode(&self, path: impl AsRef<Path>) {
         let cstring = CString::new(path.as_ref().to_str().expect("invalid string")).expect("invalid string");
         unsafe {
+            // safe to call multiple times
+            LLVM_InitializeAllTargetInfos();
+            LLVM_InitializeAllTargets();
+            LLVM_InitializeAllTargetMCs();
+            LLVM_InitializeAllAsmParsers();
+            LLVM_InitializeAllAsmPrinters();
+
+            let triple = LLVMGetDefaultTargetTriple();
+            let mut target = null_mut();
+            let mut str = null_mut();
+            if LLVMGetTargetFromTriple(triple, &mut target as *mut _, &mut str as *mut _) != 0 {
+                panic!("failed to get target from triple: {}", CStr::from_ptr(str).to_str().unwrap());
+            }
+            let cpu = CString::new("x86-64").unwrap();
+            let features = CString::new("").unwrap();
+            let targetMachine = LLVMCreateTargetMachine(target, triple, cpu.as_ptr(), features.as_ptr(), LLVMCodeGenOptLevel::LLVMCodeGenLevelDefault, LLVMRelocMode::LLVMRelocDefault, LLVMCodeModel::LLVMCodeModelDefault);
+            let dataLayout = LLVMCreateTargetDataLayout(targetMachine);
+
+            LLVMSetModuleDataLayout(self.module, dataLayout);
+            LLVMSetTarget(self.module, triple);
             LLVMWriteBitcodeToFile(self.module, cstring.as_ptr());
         }
     }
@@ -138,6 +166,6 @@ impl CompiledModule {
     pub fn writeExecutable(&self, path: impl AsRef<Path>) {
         let bitcodePath = path.as_ref().to_str().expect("invalid string").to_owned() + ".bc";
         self.writeBitcode(&bitcodePath);
-        linkExecutable(bitcodePath, path);
+        linkExecutable(&self.entryName, bitcodePath, path);
     }
 }

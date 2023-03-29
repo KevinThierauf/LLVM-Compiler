@@ -1,7 +1,7 @@
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 
 use llvm_sys::analysis::{LLVMVerifierFailureAction, LLVMVerifyFunction};
-use llvm_sys::core::{LLVMAddFunction, LLVMAddGlobal, LLVMAppendBasicBlockInContext, LLVMBasicBlockAsValue, LLVMBuildAdd, LLVMBuildAlloca, LLVMBuildAnd, LLVMBuildBr, LLVMBuildCall2, LLVMBuildCondBr, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildICmp, LLVMBuildLoad2, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildRet, LLVMBuildRetVoid, LLVMBuildSRem, LLVMBuildStore, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstNull, LLVMConstReal, LLVMFloatTypeInContext, LLVMFunctionType, LLVMGetInsertBlock, LLVMGetParam, LLVMInsertBasicBlockInContext, LLVMInt1TypeInContext, LLVMInt32TypeInContext, LLVMInt8TypeInContext, LLVMIsNull, LLVMPositionBuilderAtEnd, LLVMPrintValueToString};
+use llvm_sys::core::{LLVMAddFunction, LLVMAddGlobal, LLVMAppendBasicBlockInContext, LLVMBasicBlockAsValue, LLVMBuildAdd, LLVMBuildAlloca, LLVMBuildAnd, LLVMBuildBr, LLVMBuildCall2, LLVMBuildCondBr, LLVMBuildExactSDiv, LLVMBuildFAdd, LLVMBuildFDiv, LLVMBuildFMul, LLVMBuildFSub, LLVMBuildICmp, LLVMBuildLoad2, LLVMBuildMul, LLVMBuildNot, LLVMBuildOr, LLVMBuildRet, LLVMBuildRetVoid, LLVMBuildSRem, LLVMBuildStore, LLVMBuildSub, LLVMConstArray, LLVMConstInt, LLVMConstNull, LLVMConstReal, LLVMFloatTypeInContext, LLVMFunctionType, LLVMGetInsertBlock, LLVMGetParam, LLVMInsertBasicBlockInContext, LLVMInt1TypeInContext, LLVMInt32TypeInContext, LLVMInt8TypeInContext, LLVMIsNull, LLVMPositionBuilderAtEnd};
 use llvm_sys::LLVMIntPredicate;
 use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMBool, LLVMContextRef, LLVMTypeRef, LLVMValueRef};
 
@@ -254,9 +254,9 @@ unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValue
 }
 
 enum Next {
-    None,
+    // None,
     End,
-    Before(LLVMBasicBlockRef),
+    // Before(LLVMBasicBlockRef),
     Block(LLVMBasicBlockRef),
 }
 
@@ -268,17 +268,17 @@ impl Next {
                 let block = LLVMAppendBasicBlockInContext(module.context.0.try_lock_arc().unwrap().context, function, name.as_ptr());
                 LLVMPositionBuilderAtEnd(module.builder, block);
             }
-            Next::Before(block) => {
-                let block = LLVMInsertBasicBlockInContext(module.context.0.try_lock_arc().unwrap().context, *block, name.as_ptr());
-                LLVMPositionBuilderAtEnd(module.builder, block);
-            }
+            // Next::Before(block) => {
+            //     let block = LLVMInsertBasicBlockInContext(module.context.0.try_lock_arc().unwrap().context, *block, name.as_ptr());
+            //     LLVMPositionBuilderAtEnd(module.builder, block);
+            // }
             Next::Block(block) => {
                 let block = *block;
                 LLVMPositionBuilderAtEnd(module.builder, block);
             }
-            Next::None => {
+            // Next::None => {
                 // do nothing
-            }
+            // }
         }
     }
 }
@@ -328,7 +328,7 @@ unsafe fn getFunctionValue(module: &mut CompiledModule, function: Function) -> (
 }
 
 pub(in super) unsafe fn emit(module: &mut CompiledModule, function: LLVMValueRef, statement: Statement) -> LLVMValueRef {
-    println!("> {statement:?}");
+    // println!("> {statement:?}");
     debug_assert!(LLVMIsNull(function) == 0 || matches!(statement, Statement::FunctionDefinition(_)));
     return match statement {
         Statement::If(statement) => {
@@ -402,7 +402,7 @@ pub(in super) unsafe fn emit(module: &mut CompiledModule, function: LLVMValueRef
                 let prev = module.blockStack.pop().unwrap();
                 Next::Block(prev)
             });
-            println!("{:#?}", CStr::from_ptr(LLVMPrintValueToString(function)).to_str().unwrap());
+            // println!("{:#?}", CStr::from_ptr(LLVMPrintValueToString(function)).to_str().unwrap());
             LLVMVerifyFunction(function, LLVMVerifierFailureAction::LLVMAbortProcessAction);
             function
         }
