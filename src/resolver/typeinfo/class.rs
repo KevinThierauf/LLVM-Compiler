@@ -2,10 +2,13 @@ use std::sync::Arc;
 
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
+use llvm_sys::core::LLVMStructTypeInContext;
 use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
+use parking_lot::Mutex;
 
 use crate::ast::visibility::Visibility;
 use crate::resolver::resolutionerror::ResolutionError;
+use crate::resolver::resolvedast::defaultclass::DefaultClass;
 use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 use crate::resolver::typeinfo::{Type, TypeInfo, TypeProperty};
 
@@ -22,7 +25,13 @@ pub struct ClassTypeInfo {
     staticSize: u32,
     propertyMap: HashMap<String, TypeProperty>,
     explicitConversions: Vec<Type>,
+    llvmType: Mutex<Option<SendLLVMTypeRef>>,
 }
+
+#[derive(Debug)]
+struct SendLLVMTypeRef(LLVMTypeRef);
+
+unsafe impl Send for SendLLVMTypeRef {}
 
 impl ClassTypeInfo {
     pub fn newBuilder(name: impl Into<String>) -> Self {
@@ -31,6 +40,7 @@ impl ClassTypeInfo {
             staticSize: 0,
             propertyMap: HashMap::new(),
             explicitConversions: Vec::new(),
+            llvmType: Default::default(),
         };
     }
 
@@ -65,15 +75,22 @@ impl TypeInfo for ClassTypeInfo {
     }
 
     fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef {
-        todo!()
-    }
-
-    fn getDefaultValue(&self) -> ResolvedExpr {
-        todo!()
+        return self.llvmType.lock().get_or_insert_with(|| {
+            let mut llvmTypes = self.propertyMap.iter().map(|(_, property)| property.ty.getLLVMType(context)).collect::<Vec<_>>();
+            unsafe {
+                return SendLLVMTypeRef(LLVMStructTypeInContext(context, llvmTypes.as_mut_ptr(), llvmTypes.len() as _, 0 as _));
+            }
+        }).0;
     }
 
     fn getExplicitConversions(&self) -> &Vec<Type> {
         return &self.explicitConversions;
+    }
+
+    fn getDefaultValue(&self, ty: Type) -> ResolvedExpr {
+        return ResolvedExpr::DefaultClass(DefaultClass {
+            ty,
+        });
     }
 
     fn getPropertyMap(&self) -> &HashMap<String, TypeProperty> {

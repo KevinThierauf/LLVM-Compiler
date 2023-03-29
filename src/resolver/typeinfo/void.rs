@@ -3,8 +3,8 @@ use std::sync::Arc;
 use llvm_sys::core::LLVMVoidTypeInContext;
 use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 use once_cell::sync::Lazy;
-use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 
+use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 use crate::resolver::typeinfo::{Type, TypeInfo};
 
 pub static VOID_TYPE: Lazy<Type> = Lazy::new(|| Type(Arc::new(Void { explicitConversions: vec![] })));
@@ -28,11 +28,11 @@ impl TypeInfo for Void {
         };
     }
 
-    fn getDefaultValue(&self) -> ResolvedExpr {
-        unreachable!()
-    }
-
     fn getExplicitConversions(&self) -> &Vec<Type> {
         return &self.explicitConversions;
+    }
+
+    fn getDefaultValue(&self, _ty: Type) -> ResolvedExpr {
+        unreachable!()
     }
 }

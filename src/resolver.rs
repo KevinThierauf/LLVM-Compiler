@@ -21,7 +21,6 @@ use crate::resolver::exporttable::GlobalExportTable;
 use crate::resolver::exporttable::incompleteexporttable::IncompleteExportTable;
 use crate::resolver::function::Function;
 use crate::resolver::resolutionerror::ResolutionError;
-use crate::resolver::resolvedast::constructorcall::ConstructorCall;
 use crate::resolver::resolvedast::functioncall::FunctionCall;
 use crate::resolver::resolvedast::ifstatement::IfStatement;
 use crate::resolver::resolvedast::ResolvedAST;
@@ -336,7 +335,7 @@ impl ResolutionHandler {
                         Some(Statement::If(Box::new(IfStatement {
                             condition: expr,
                             statement,
-                            elseStatement 
+                            elseStatement,
                         })))
                     } else {
                         resolutionHandler.errorVec.push(ResolutionError::ExpectedType(BOOLEAN_TYPE.to_owned(), expr.getExpressionType(), format!("expected boolean conditional for if statement")));
@@ -409,7 +408,7 @@ impl Scope {
 
     fn declareVariable(&mut self, name: &str, ty: Type, errorVec: &mut Vec<ResolutionError>) -> Option<ResolvedVariable> {
         static NEXT_VARIABLE_ID: AtomicUsize = AtomicUsize::new(0);
-        
+
         return match self.variableMap.entry(name.to_owned()) {
             Entry::Occupied(_) => {
                 errorVec.push(ResolutionError::ConflictingVariable(name.to_owned(), format!("found multiple variables in scope with same variable name")));
@@ -417,7 +416,6 @@ impl Scope {
             }
             Entry::Vacant(v) => {
                 Some(v.insert(ResolvedVariable {
-                    variableName: name.to_owned(),
                     ty,
                     id: NEXT_VARIABLE_ID.fetch_add(1, Ordering::Relaxed),
                 }).to_owned())
@@ -466,17 +464,17 @@ fn getResolvedFunctionCall(resolutionHandler: &mut ResolutionHandler, function: 
 
 fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr: &Expr, global: bool, callback: Box<dyn 'a + FnOnce(&mut ResolutionHandler, ResolvedExpr) -> R>) -> Option<R> {
     let resolved = match expr {
-        Expr::ConstructorCall(expr) => {
-            if !expr.argVec.is_empty() {
-                resolutionHandler.errorVec.push(ResolutionError::Unsupported(expr.range.getStartPos(), format!("constructors do not support arguments")));
-                return None;
-            }
-            getResolvedType(resolutionHandler, &expr.typeName, |_, ty| {
-                ResolvedExpr::ConstructorCall(Box::new(ConstructorCall {
-                    ty,
-                }))
-            })?
-        }
+        // Expr::ConstructorCall(expr) => {
+        //     if !expr.argVec.is_empty() {
+        //         resolutionHandler.errorVec.push(ResolutionError::Unsupported(expr.range.getStartPos(), format!("constructors do not support arguments")));
+        //         return None;
+        //     }
+        //     getResolvedType(resolutionHandler, &expr.typeName, |_, ty| {
+        //         ResolvedExpr::ConstructorCall(Box::new(ConstructorCall {
+        //             ty,
+        //         }))
+        //     })?
+        // }
         Expr::FunctionCall(expr) => {
             match resolutionHandler.exportTable.getExportedFunction(expr.functionName.getToken().getSourceRange().getSourceInRange()) {
                 Ok(function) => {
@@ -530,7 +528,7 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
             } else {
                 let mut exprVec = Vec::new();
 
-                for expr in expr.operands.iter().map(|expr| getResolvedExpression(resolutionHandler, expr, global,Box::new(|_, resolved| resolved))).collect::<Vec<_>>() {
+                for expr in expr.operands.iter().map(|expr| getResolvedExpression(resolutionHandler, expr, global, Box::new(|_, resolved| resolved))).collect::<Vec<_>>() {
                     debug_assert!(expr.is_some() || !resolutionHandler.errorVec.is_empty());
                     exprVec.push(expr?);
                 }

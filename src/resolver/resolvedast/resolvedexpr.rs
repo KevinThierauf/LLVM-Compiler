@@ -3,7 +3,8 @@ use std::ops::Deref;
 
 use once_cell::sync::Lazy;
 
-use crate::resolver::resolvedast::constructorcall::ConstructorCall;
+use crate::resolver::resolvedast::defaultclass::DefaultClass;
+use crate::resolver::resolvedast::defaultvalue::DefaultValue;
 use crate::resolver::resolvedast::functioncall::FunctionCall;
 use crate::resolver::resolvedast::resolvedoperator::ResolvedOperator;
 use crate::resolver::resolvedast::resolvedproperty::ResolvedProperty;
@@ -56,10 +57,12 @@ impl ResolvedExprType for ResolvedExprTypeValue {
 pub enum ResolvedExpr {
     Operator(Box<ResolvedOperator>),
     FunctionCall(Box<FunctionCall>),
-    ConstructorCall(Box<ConstructorCall>),
+    // ConstructorCall(Box<ConstructorCall>),
     VariableDeclaration(VariableDeclare),
     Variable(ResolvedVariable),
     Property(Box<ResolvedProperty>),
+    DefaultValue(DefaultValue),
+    DefaultClass(DefaultClass),
     LiteralBool(bool),
     LiteralChar(u32),
     LiteralFloat(f64),
@@ -71,9 +74,10 @@ impl ResolvedExpr {
     pub fn getResolvedExprType(&self) -> &dyn ResolvedExprType {
         return match self {
             ResolvedExpr::Operator(v) => v.deref(),
-            ResolvedExpr::ConstructorCall(v) => v.deref(),
             ResolvedExpr::FunctionCall(v) => v.deref(),
             ResolvedExpr::VariableDeclaration(v) => v,
+            ResolvedExpr::DefaultValue(v) => v,
+            ResolvedExpr::DefaultClass(v) => v,
             ResolvedExpr::Variable(v) => v,
             ResolvedExpr::Property(v) => v.deref(),
             ResolvedExpr::LiteralBool(_) => {

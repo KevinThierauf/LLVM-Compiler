@@ -1,7 +1,5 @@
 use std::fmt::Debug;
 
-use constructorcallexpr::ConstructorCallExpr;
-
 use crate::ast::symbol::{Symbol, SymbolType};
 use crate::ast::symbol::expr::functioncall::FunctionCallExpr;
 use crate::ast::symbol::expr::literal::literalarray::LiteralArray;
@@ -21,7 +19,6 @@ pub mod functioncall;
 pub mod variableexpr;
 pub mod literal;
 pub mod variabledeclaration;
-pub mod constructorcallexpr;
 
 pub trait ExprType: 'static + SymbolType + Debug {
     fn getSymbolType(&self) -> &dyn SymbolType;
@@ -33,7 +30,7 @@ pub enum Expr {
     Operator(OperatorExpr),
     VariableDeclaration(VariableDeclarationExpr),
     Variable(VariableExpr),
-    ConstructorCall(ConstructorCallExpr),
+    // ConstructorCall(ConstructorCallExpr),
     LiteralArray(LiteralArray),
     LiteralBool(LiteralBool),
     LiteralChar(LiteralChar),
@@ -65,7 +62,7 @@ impl Expr {
             Expr::LiteralInteger(v) => v,
             Expr::LiteralString(v) => v,
             Expr::LiteralTuple(v) => v,
-            Expr::ConstructorCall(v) => v,
+            // Expr::ConstructorCall(v) => v,
         };
     }
 }

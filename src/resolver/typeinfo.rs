@@ -7,6 +7,7 @@ use std::sync::Arc;
 use hashbrown::HashMap;
 use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 use once_cell::sync::Lazy;
+
 use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 
 pub mod tuple;
@@ -25,8 +26,8 @@ pub trait TypeInfo: Sync + Send {
     fn getTypeName(&self) -> &str;
     fn getStaticSize(&self) -> u32;
     fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef;
-    fn getDefaultValue(&self) -> ResolvedExpr;
     fn getExplicitConversions(&self) -> &Vec<Type>;
+    fn getDefaultValue(&self, ty: Type) -> ResolvedExpr;
 
     fn getPropertyMap(&self) -> &HashMap<String, TypeProperty> {
         static EMPTY_MAP: Lazy<HashMap<String, TypeProperty>> = Lazy::new(|| HashMap::new());
@@ -40,6 +41,12 @@ pub trait TypeInfo: Sync + Send {
 
 #[derive(Clone)]
 pub struct Type(pub Arc<dyn TypeInfo>);
+
+impl Type {
+    pub fn getDefaultValue(&self) -> ResolvedExpr {
+        return self.0.getDefaultValue(self.to_owned());
+    }
+}
 
 impl Debug for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
