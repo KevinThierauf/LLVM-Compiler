@@ -6,11 +6,14 @@ use std::sync::Arc;
 use hashbrown::HashMap;
 use llvm_sys::analysis::{LLVMVerifierFailureAction, LLVMVerifyModule};
 use llvm_sys::bit_writer::LLVMWriteBitcodeToFile;
-use llvm_sys::core::{LLVMConstNull, LLVMContextCreate, LLVMContextDispose, LLVMCreateBuilderInContext, LLVMDisposeBuilder, LLVMDisposeModule, LLVMInt8TypeInContext, LLVMModuleCreateWithNameInContext, LLVMSetTarget};
+use llvm_sys::core::{LLVMConstNull, LLVMContextCreate, LLVMContextDispose, LLVMCreateBuilderInContext, LLVMCreatePassManager, LLVMDisposeBuilder, LLVMDisposeModule, LLVMInt8TypeInContext, LLVMModuleCreateWithNameInContext, LLVMRunPassManager, LLVMSetTarget};
 use llvm_sys::linker::LLVMLinkModules2;
 use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMModuleRef, LLVMTypeRef, LLVMValueRef};
 use llvm_sys::target::{LLVM_InitializeAllAsmParsers, LLVM_InitializeAllAsmPrinters, LLVM_InitializeAllTargetInfos, LLVM_InitializeAllTargetMCs, LLVM_InitializeAllTargets, LLVMSetModuleDataLayout};
 use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMCreateTargetDataLayout, LLVMCreateTargetMachine, LLVMGetDefaultTargetTriple, LLVMGetTargetFromTriple, LLVMRelocMode};
+use llvm_sys::transforms::ipo::{LLVMAddConstantMergePass, LLVMAddDeadArgEliminationPass, LLVMAddFunctionInliningPass, LLVMAddGlobalDCEPass, LLVMAddGlobalOptimizerPass, LLVMAddStripDeadPrototypesPass};
+use llvm_sys::transforms::scalar::{LLVMAddAggressiveDCEPass, LLVMAddDeadStoreEliminationPass, LLVMAddIndVarSimplifyPass, LLVMAddLoopDeletionPass, LLVMAddLoopIdiomPass, LLVMAddLoopUnrollAndJamPass, LLVMAddMemCpyOptPass, LLVMAddReassociatePass};
+use llvm_sys::transforms::util::LLVMAddPromoteMemoryToRegisterPass;
 use parking_lot::Mutex;
 
 use crate::ast::visibility::Visibility;
@@ -162,6 +165,29 @@ impl CompiledModule {
 
             LLVMSetModuleDataLayout(self.module, dataLayout);
             LLVMSetTarget(self.module, triple);
+
+            let pass = LLVMCreatePassManager();
+            // some passes to optimize IR
+            // (by no means exhaustive, in reasonable order, or without overlap)
+            LLVMAddReassociatePass(pass);
+            LLVMAddConstantMergePass(pass);
+            LLVMAddFunctionInliningPass(pass);
+            LLVMAddIndVarSimplifyPass(pass);
+            LLVMAddLoopUnrollAndJamPass(pass);
+            LLVMAddLoopIdiomPass(pass);
+            LLVMAddLoopDeletionPass(pass);
+            LLVMAddGlobalOptimizerPass(pass);
+            LLVMAddGlobalDCEPass(pass);
+            LLVMAddDeadArgEliminationPass(pass);
+            LLVMAddMemCpyOptPass(pass);
+            LLVMAddDeadStoreEliminationPass(pass);
+            LLVMAddPromoteMemoryToRegisterPass(pass);
+            LLVMAddStripDeadPrototypesPass(pass);
+            LLVMAddAggressiveDCEPass(pass);
+            LLVMRunPassManager(pass, self.module);
+
+            // println!("{}", CStr::from_ptr(LLVMPrintModuleToString(self.module)).to_str().unwrap());
+
             LLVMWriteBitcodeToFile(self.module, cstring.as_ptr());
         }
     }

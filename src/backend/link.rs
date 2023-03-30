@@ -47,9 +47,9 @@ fn link(entryName: &str, bitcodePath: impl AsRef<Path>, executablePath: impl AsR
         .arg(format!("/out:{}", executablePath.as_ref().as_os_str().to_str().unwrap()))
         .arg(format!("/entry:{entryName}"))
         // statically linking to sdk requires the following libs
-        .arg(format!("/defaultlib:libucrtd.lib"))
-        .arg(format!("/defaultlib:libcmtd.lib"))
-        .arg(format!("/defaultlib:libcpmtd.lib"))
+        .arg(format!("/defaultlib:libucrt.lib"))
+        .arg(format!("/defaultlib:libcmt.lib"))
+        .arg(format!("/defaultlib:libcpmt.lib"))
         .arg(format!("/defaultlib:ws2_32.lib"))
         .arg(format!("/defaultlib:bcrypt.lib"))
         .arg(format!("/defaultlib:userenv.lib"))
