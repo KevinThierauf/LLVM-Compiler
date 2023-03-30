@@ -23,7 +23,7 @@ char c = 'c'
 print(5)
 //print(5.0)
 
-//structure.method()
+structure.method()
 
 class Structure {
     int a
@@ -31,7 +31,8 @@ class Structure {
     int c
 
     void method() {
-        // do nothing
+        print("method!")
+        print(self.a)
     }
 }
 
@@ -50,6 +51,7 @@ if function() == 0 {
 int var = 0
 while var < 5 {
     print("loop")
+    print(var)
     var++
 }
 

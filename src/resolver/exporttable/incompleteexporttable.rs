@@ -144,7 +144,7 @@ impl IncompleteExportTable {
     }
 
     pub fn complete(mut self, table: &mut CompleteExportTable) -> Result<(), Vec<ResolutionError>> {
-        fn resolveFunction(errorVec: &mut Vec<ResolutionError>, function: IncompleteFunction, table: &CompleteExportTable) -> Option<Function> {
+        fn resolveFunction(errorVec: &mut Vec<ResolutionError>, function: IncompleteFunction, table: &CompleteExportTable, class: Option<Type>) -> Option<Function> {
             fn getExported(errorVec: &mut Vec<ResolutionError>, typeName: &String, table: &CompleteExportTable) -> Option<Type> {
                 return match table.getExportedType(typeName) {
                     Ok(ty) => Some(ty),
@@ -157,6 +157,13 @@ impl IncompleteExportTable {
 
             let returnType = getExported(errorVec, &function.returnType, table)?;
             let mut parameterVec = Vec::new();
+
+            if let Some(ty) = class {
+                parameterVec.push(Parameter {
+                    ty,
+                    name: "self".to_owned(),
+                })
+            }
 
             if function.parameters.len() != function.parameters.iter().map(|parameter| &parameter.name).collect::<HashSet<_>>().len() {
                 errorVec.push(ResolutionError::ConflictingParameterName(function.name));
@@ -241,7 +248,7 @@ impl IncompleteExportTable {
         if errorVec.is_empty() {
             for (class, functions) in classFunctionInfo {
                 let mut classFunctions = TypeFunctionInfo::new();
-                functions.into_iter().for_each(|function| if let Some(function) = resolveFunction(&mut errorVec, function, table) {
+                functions.into_iter().for_each(|function| if let Some(function) = resolveFunction(&mut errorVec, function, table, Some(class.to_owned())) {
                     if let Err(err) = classFunctions.addFunction(function) {
                         errorVec.push(err);
                     }
@@ -250,7 +257,7 @@ impl IncompleteExportTable {
             }
 
             for function in self.functionVec {
-                if let Some(function) = resolveFunction(&mut errorVec, function, table) {
+                if let Some(function) = resolveFunction(&mut errorVec, function, table, None) {
                     if let Err(err) = table.addExportedFunction(function) {
                         errorVec.push(err);
                     }

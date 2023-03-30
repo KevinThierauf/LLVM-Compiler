@@ -149,15 +149,12 @@ impl TopLevelResolver {
         }
     }
 
-    fn resolveFunction(&self, selfType: Option<Type>, function: Function, resolutionHandler: &mut ResolutionHandler, functionDefinition: &FunctionDefinitionSym) -> Option<ResolvedFunctionDefinition> {
+    fn resolveFunction(&self, function: Function, resolutionHandler: &mut ResolutionHandler, functionDefinition: &FunctionDefinitionSym) -> Option<ResolvedFunctionDefinition> {
         // parameter scope
         resolutionHandler.pushScope();
 
-        fn resolveFunctionInner(selfType: Option<Type>, function: &Function, resolutionHandler: &mut ResolutionHandler, functionDefinition: &FunctionDefinitionSym) -> Option<(ResolvedScope, Vec<usize>)> {
+        fn resolveFunctionInner(function: &Function, resolutionHandler: &mut ResolutionHandler, functionDefinition: &FunctionDefinitionSym) -> Option<(ResolvedScope, Vec<usize>)> {
             let mut parameterVec = Vec::new();
-            if let Some(selfType) = selfType {
-                parameterVec.push(resolutionHandler.scope.declareVariable("self", selfType, &mut resolutionHandler.errorVec)?.id);
-            }
 
             for parameter in &function.parameters {
                 parameterVec.push(resolutionHandler.scope.declareVariable(&parameter.name, parameter.ty.to_owned(), &mut resolutionHandler.errorVec)?.id);
@@ -170,7 +167,7 @@ impl TopLevelResolver {
             return Some((resolvedScope, parameterVec));
         }
 
-        let inner = resolveFunctionInner(selfType, &function, resolutionHandler, functionDefinition);
+        let inner = resolveFunctionInner(&function, resolutionHandler, functionDefinition);
         resolutionHandler.popScope();
         let (resolvedScope, parameterVec) = inner?;
 
@@ -193,7 +190,7 @@ impl ResolverType for TopLevelResolver {
                 for functionDefinition in &symbol.methods {
                     let functionName = functionDefinition.functionName.getToken().getSourceRange().getSourceInRange();
                     let function = functionInfo.getFunction(functionName).expect("unable to find function for class definition");
-                    if let Some(resolved) = self.resolveFunction(Some(classType.to_owned()), function, resolutionHandler, functionDefinition) {
+                    if let Some(resolved) = self.resolveFunction(function, resolutionHandler, functionDefinition) {
                         resolvedVec.push(Statement::FunctionDefinition(resolved));
                     } else {
                         return Resolution::Err;
@@ -203,7 +200,7 @@ impl ResolverType for TopLevelResolver {
             }
             Symbol::FunctionDefinition(functionDefinition) => {
                 let function = resolutionHandler.exportTable.getExportedFunction(functionDefinition.functionName.getToken().getSourceRange().getSourceInRange()).expect("unable to find function for definition");
-                return if let Some(resolved) = self.resolveFunction(None, function, resolutionHandler, functionDefinition) {
+                return if let Some(resolved) = self.resolveFunction(function, resolutionHandler, functionDefinition) {
                     Resolution::Ok(Statement::FunctionDefinition(resolved))
                 } else {
                     Resolution::Err
@@ -450,9 +447,14 @@ fn getResolvedType<R>(resolutionHandler: &mut ResolutionHandler, modulePos: &Mod
     };
 }
 
-fn getResolvedFunctionCall(resolutionHandler: &mut ResolutionHandler, function: Function, functionCall: &FunctionCallExpr) -> Option<FunctionCall> {
-    return if functionCall.argVec.len() == function.parameters.len() {
-        let mut argVec = Vec::new();
+fn getResolvedFunctionCall(resolutionHandler: &mut ResolutionHandler, function: Function, functionCall: &FunctionCallExpr, selfValue: Option<ResolvedExpr>) -> Option<FunctionCall> {
+    let mut argVec = Vec::new();
+    if let Some(selfValue) = selfValue {
+        argVec.push(selfValue);
+    }
+    let argLength = functionCall.argVec.len() + argVec.len();
+
+    return if argLength == function.parameters.len() {
         for index in 0..functionCall.argVec.len() {
             getResolvedExpression(resolutionHandler, &functionCall.argVec[index], false, Box::new(|resolutionHandler, expression| {
                 if expression.getExpressionType() == function.parameters[index].ty {
@@ -463,7 +465,7 @@ fn getResolvedFunctionCall(resolutionHandler: &mut ResolutionHandler, function: 
             }));
         }
 
-        if argVec.len() == functionCall.argVec.len() {
+        if argLength == argVec.len() {
             Some(FunctionCall {
                 function,
                 argVec,
@@ -493,7 +495,7 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
         Expr::FunctionCall(expr) => {
             match resolutionHandler.exportTable.getExportedFunction(expr.functionName.getToken().getSourceRange().getSourceInRange()) {
                 Ok(function) => {
-                    ResolvedExpr::FunctionCall(Box::new(getResolvedFunctionCall(resolutionHandler, function, expr)?))
+                    ResolvedExpr::FunctionCall(Box::new(getResolvedFunctionCall(resolutionHandler, function, expr, None)?))
                 }
                 Err(error) => {
                     resolutionHandler.errorVec.push(error);
@@ -513,8 +515,7 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
                         let functionName = functionCall.functionName.getToken().getSourceRange().getSourceInRange();
                         match functionInfo.getFunction(functionName) {
                             Some(function) => {
-                                let mut functionCall = getResolvedFunctionCall(resolutionHandler, function, functionCall)?;
-                                functionCall.argVec.insert(0, structure);
+                                let functionCall = getResolvedFunctionCall(resolutionHandler, function, functionCall, Some(structure))?;
                                 ResolvedExpr::FunctionCall(Box::new(functionCall))
                             }
                             None => {

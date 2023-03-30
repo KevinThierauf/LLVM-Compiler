@@ -414,8 +414,6 @@ pub unsafe fn emit(module: &mut CompiledModule, function: LLVMValueRef, statemen
             branch
         }
         Statement::While(statement) => {
-            let condition = emitExpr(module, statement.condition);
-            let falseValue = emitExpr(module, ResolvedExpr::LiteralBool(false));
             let contextLock = module.context.0.lock_arc();
             let context = contextLock.context;
             let name = CString::new("while_cmp").unwrap();
@@ -423,8 +421,6 @@ pub unsafe fn emit(module: &mut CompiledModule, function: LLVMValueRef, statemen
             let name = CString::new("while_end").unwrap();
             let endBlock = LLVMAppendBasicBlockInContext(context, function, name.as_ptr());
 
-            let name = CString::new("while_cmp").unwrap();
-            let condition = LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntNE, condition, falseValue, name.as_ptr());
             let name = CString::new("while_block").unwrap();
             let whileBlock = LLVMInsertBasicBlockInContext(context, endBlock, name.as_ptr());
 
@@ -432,10 +428,14 @@ pub unsafe fn emit(module: &mut CompiledModule, function: LLVMValueRef, statemen
 
             LLVMBuildBr(module.builder, cmpBlock);
             LLVMPositionBuilderAtEnd(module.builder, cmpBlock);
+            let condition = emitExpr(module, statement.condition);
+            let falseValue = emitExpr(module, ResolvedExpr::LiteralBool(false));
+            let name = CString::new("while_condition").unwrap();
+            let condition = LLVMBuildICmp(module.builder, LLVMIntPredicate::LLVMIntNE, condition, falseValue, name.as_ptr());
             LLVMBuildCondBr(module.builder, condition, whileBlock, endBlock);
 
             emitScope(module, false, "", function, wrapInScope(statement.statement), |_, _, _| whileBlock, |_| {}, |module| {
-                LLVMBuildBr(module.builder, endBlock);
+                LLVMBuildBr(module.builder, cmpBlock);
                 Next::Block(endBlock)
             });
             LLVMConstNull(LLVMInt8TypeInContext(module.context.0.lock_arc().context))
