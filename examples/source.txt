@@ -21,7 +21,7 @@ print(structure2.a)
 char c = 'c'
 
 print(5)
-//print(5.0)
+print(5.5)
 
 structure.method()
 

@@ -46,7 +46,16 @@ fn link(entryName: &str, bitcodePath: impl AsRef<Path>, executablePath: impl AsR
     return Command::new(LD_PATH)
         .arg(format!("/out:{}", executablePath.as_ref().as_os_str().to_str().unwrap()))
         .arg(format!("/entry:{entryName}"))
-        .arg(format!("/defaultlib:lib/sdk/target/debug/sdk.dll.lib"))
+        // statically linking to sdk requires the following libs
+        .arg(format!("/defaultlib:libucrtd.lib"))
+        .arg(format!("/defaultlib:libcmtd.lib"))
+        .arg(format!("/defaultlib:libcpmtd.lib"))
+        .arg(format!("/defaultlib:ws2_32.lib"))
+        .arg(format!("/defaultlib:bcrypt.lib"))
+        .arg(format!("/defaultlib:userenv.lib"))
+        .arg(format!("/defaultlib:advapi32.lib"))
+        .arg(format!("/defaultlib:lib/sdk/target/debug/sdk.lib"))
+        .arg(format!("/safeseh:no"))
         .arg("/subsystem:console")
         .arg(bitcodePath.as_ref().as_os_str())
         .status().expect(&format!("failed to run {LD_PATH}")).success();
