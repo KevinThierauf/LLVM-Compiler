@@ -16,6 +16,8 @@ pub mod resolvedfunctiondefinition;
 pub mod resolvedscope;
 pub mod defaultvalue;
 pub mod defaultclass;
+pub mod printstatement;
+pub mod defaultpointer;
 
 static NEXT_VARIABLE_ID: AtomicUsize = AtomicUsize::new(0);
 

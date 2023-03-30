@@ -19,10 +19,6 @@ impl TypeInfo for Character {
         return "char";
     }
 
-    fn getStaticSize(&self) -> u32 {
-        return 4;
-    }
-
     fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef {
         return unsafe {
             LLVMInt8TypeInContext(context)

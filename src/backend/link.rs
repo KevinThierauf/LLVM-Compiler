@@ -46,6 +46,7 @@ fn link(entryName: &str, bitcodePath: impl AsRef<Path>, executablePath: impl AsR
     return Command::new(LD_PATH)
         .arg(format!("/out:{}", executablePath.as_ref().as_os_str().to_str().unwrap()))
         .arg(format!("/entry:{entryName}"))
+        .arg(format!("/defaultlib:lib/sdk/target/debug/sdk.dll.lib"))
         .arg("/subsystem:console")
         .arg(bitcodePath.as_ref().as_os_str())
         .status().expect(&format!("failed to run {LD_PATH}")).success();

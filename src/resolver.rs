@@ -23,6 +23,7 @@ use crate::resolver::function::Function;
 use crate::resolver::resolutionerror::ResolutionError;
 use crate::resolver::resolvedast::functioncall::FunctionCall;
 use crate::resolver::resolvedast::ifstatement::IfStatement;
+use crate::resolver::resolvedast::printstatement::PrintStatement;
 use crate::resolver::resolvedast::ResolvedAST;
 use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 use crate::resolver::resolvedast::resolvedfunctiondefinition::ResolvedFunctionDefinition;
@@ -38,6 +39,7 @@ use crate::resolver::typeinfo::primitive::boolean::BOOLEAN_TYPE;
 use crate::resolver::typeinfo::primitive::character::CHARACTER_TYPE;
 use crate::resolver::typeinfo::primitive::float::FLOAT_TYPE;
 use crate::resolver::typeinfo::primitive::integer::INTEGER_TYPE;
+use crate::resolver::typeinfo::string::STRING_TYPE;
 use crate::resolver::typeinfo::Type;
 use crate::resolver::typeinfo::void::VOID_TYPE;
 
@@ -339,6 +341,19 @@ impl ResolutionHandler {
                         })))
                     } else {
                         resolutionHandler.errorVec.push(ResolutionError::ExpectedType(BOOLEAN_TYPE.to_owned(), expr.getExpressionType(), format!("expected boolean conditional for if statement")));
+                        None
+                    };
+                })).flatten();
+            }
+            Symbol::PrintSym(symbol) => {
+                return getResolvedExpression(self, &symbol.expr, false, Box::new(|resolutionHandler, expr| {
+                    let ty = expr.getExpressionType();
+                    return if ty == INTEGER_TYPE || ty == FLOAT_TYPE || ty == STRING_TYPE {
+                        Some(Statement::Print(PrintStatement {
+                            value: expr,
+                        }))
+                    } else {
+                        resolutionHandler.errorVec.push(ResolutionError::InvalidOperationType(ty, format!("Cannot call print on type")));
                         None
                     };
                 })).flatten();

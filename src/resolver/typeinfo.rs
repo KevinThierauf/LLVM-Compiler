@@ -10,21 +10,21 @@ use once_cell::sync::Lazy;
 
 use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr;
 
-pub mod tuple;
 pub mod void;
 pub mod primitive;
 pub mod class;
 pub mod string;
+pub mod pointer;
 
 #[derive(Debug, Clone)]
 pub struct TypeProperty {
     pub ty: Type,
     pub name: String,
+    pub index: usize,
 }
 
 pub trait TypeInfo: Sync + Send {
     fn getTypeName(&self) -> &str;
-    fn getStaticSize(&self) -> u32;
     fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef;
     fn getExplicitConversions(&self) -> &Vec<Type>;
     fn getDefaultValue(&self, ty: Type) -> ResolvedExpr;

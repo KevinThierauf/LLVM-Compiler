@@ -25,6 +25,7 @@ use crate::ast::symbol::ifstatement::{ElseSym, IfSym};
 use crate::ast::symbol::import::ImportSym;
 use crate::ast::symbol::looptype::label::Label;
 use crate::ast::symbol::looptype::whileloop::WhileLoop;
+use crate::ast::symbol::printsym::PrintSym;
 use crate::ast::symbol::returnsym::ReturnSym;
 use crate::ast::tokensource::conflictresolution::{resolveClassDefinitionConflict, resolveSymbolConflict};
 use crate::ast::tokensource::matchtype::{getLazyMatch, getMappedMatch, getMatchAnyOf, getMatchFrom, getMatchOneOf, getRepeatingMatch, Match, MatchOption, MatchType, OptionalMatch};
@@ -169,7 +170,7 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
         MatchOption::new(getMatchWhileSym(), |_, v| Ok(Symbol::While(v))),
         MatchOption::new(getMatchReturnSym(), |_, v| Ok(Symbol::Return(v))),
         MatchOption::new(getMatchImportSym(), |_, v| Ok(Symbol::ImportSym(v))),
-        // MatchOption::new(getMatchConstructorCallExpr(), |_, v| Ok(Symbol::Expr(Expr::ConstructorCall(v)))),
+        MatchOption::new(getMatchPrintSym(), |_, v| Ok(Symbol::PrintSym(v))),
         MatchOption::new(getMatchFunctionCallExpr(), |_, v| Ok(Symbol::Expr(Expr::FunctionCall(v)))),
         MatchOption::new(getMatchOperatorExpr(), |_, v| Ok(Symbol::Expr(Expr::Operator(v)))),
         MatchOption::new(getMatchVariableDeclarationExpr(), |_, v| Ok(Symbol::Expr(Expr::VariableDeclaration(v)))),
@@ -573,20 +574,18 @@ pub fn getMatchImportSym() -> impl MatchType<Value = ImportSym> {
         }));
 }
 
-// pub fn getMatchConstructorCallExpr() -> impl MatchType<Value = ConstructorCallExpr> {
-//     // new Type(args)
-//     return getMappedMatch(
-//         (
-//             getMatchKeyword(Keyword::New),
-//             getMatchType(), // name
-//             getMatchParenthesis(ParenthesisType::Rounded, |module| getMatchExprCommaList().getMatch(module.getModulePos(0))),
-//         ), |range, (_, typeName, argVec)| Ok(ConstructorCallExpr {
-//             range,
-//             typeName,
-//             argVec: argVec.take().1,
-//         }),
-//     );
-// }
+pub fn getMatchPrintSym() -> impl MatchType<Value = PrintSym> {
+    // print(value)
+    return getMappedMatch(
+        (
+            getMatchKeyword(Keyword::Print),
+            getMatchParenthesis(ParenthesisType::Rounded, |module| getMatchExpr().getMatch(module.getModulePos(0)))
+        ), |range, (_, expr)| Ok(PrintSym {
+            range,
+            expr: expr.take().1,
+        }),
+    );
+}
 
 pub fn getMatchFunctionCallExpr() -> impl MatchType<Value = FunctionCallExpr> {
     // functionName(args)
@@ -693,7 +692,7 @@ pub fn getMatchLiteralChar() -> impl MatchType<Value = LiteralChar> {
         range,
         value: {
             let source = fileRange.getSourceInRange();
-            debug_assert_eq!(source.len(), 1);
+            debug_assert_eq!(source.len(), 1, "{source}");
             source.chars().next().unwrap() as u32
         },
     }));

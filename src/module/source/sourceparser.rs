@@ -563,7 +563,7 @@ impl SourceParser {
                         }
                     }
 
-                    self.addToken(TokenType::String(quoteType, self.getFileRange(startIndex..self.nextCharacterIndex)));
+                    self.addToken(TokenType::String(quoteType, self.getFileRange(startIndex..self.nextCharacterIndex - 1)));
                 }
                 _ if isOpenParenthesis(character).is_some() => {
                     self.addBasicTokenExcludeLastChar(true)?;

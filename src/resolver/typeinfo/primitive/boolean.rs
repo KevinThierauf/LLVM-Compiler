@@ -19,10 +19,6 @@ impl TypeInfo for Boolean {
         return "bool";
     }
 
-    fn getStaticSize(&self) -> u32 {
-        return 1;
-    }
-
     fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef {
         return unsafe {
             LLVMInt1TypeInContext(context)

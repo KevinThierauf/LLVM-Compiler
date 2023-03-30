@@ -4,6 +4,7 @@ use std::ops::Deref;
 use once_cell::sync::Lazy;
 
 use crate::resolver::resolvedast::defaultclass::DefaultClass;
+use crate::resolver::resolvedast::defaultpointer::DefaultPointer;
 use crate::resolver::resolvedast::defaultvalue::DefaultValue;
 use crate::resolver::resolvedast::functioncall::FunctionCall;
 use crate::resolver::resolvedast::resolvedoperator::ResolvedOperator;
@@ -62,6 +63,7 @@ pub enum ResolvedExpr {
     Variable(ResolvedVariable),
     Property(Box<ResolvedProperty>),
     DefaultValue(DefaultValue),
+    DefaultPointer(DefaultPointer),
     DefaultClass(DefaultClass),
     LiteralBool(bool),
     LiteralChar(u32),
@@ -78,6 +80,7 @@ impl ResolvedExpr {
             ResolvedExpr::VariableDeclaration(v) => v,
             ResolvedExpr::DefaultValue(v) => v,
             ResolvedExpr::DefaultClass(v) => v,
+            ResolvedExpr::DefaultPointer(v) => v,
             ResolvedExpr::Variable(v) => v,
             ResolvedExpr::Property(v) => v.deref(),
             ResolvedExpr::LiteralBool(_) => {

@@ -18,10 +18,6 @@ impl TypeInfo for Void {
         return "void";
     }
 
-    fn getStaticSize(&self) -> u32 {
-        return 0;
-    }
-
     fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef {
         return unsafe {
             LLVMVoidTypeInContext(context)

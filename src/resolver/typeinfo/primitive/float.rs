@@ -9,18 +9,16 @@ use crate::resolver::resolvedast::resolvedexpr::ResolvedExpr::LiteralFloat;
 use crate::resolver::typeinfo::{Type, TypeInfo};
 use crate::resolver::typeinfo::primitive::integer::INTEGER_TYPE;
 
-pub static FLOAT_TYPE: Lazy<Type> = Lazy::new(|| Float::new("float", 32));
+pub static FLOAT_TYPE: Lazy<Type> = Lazy::new(|| Float::new("float"));
 
 pub struct Float {
     typeName: String,
-    bitWidth: u32,
 }
 
 impl Float {
-    pub fn new(typeName: impl Into<String>, bitWidth: u32) -> Type {
+    pub fn new(typeName: impl Into<String>) -> Type {
         return Type(Arc::new(Self {
             typeName: typeName.into(),
-            bitWidth,
         }));
     }
 }
@@ -28,10 +26,6 @@ impl Float {
 impl TypeInfo for Float {
     fn getTypeName(&self) -> &str {
         return &self.typeName;
-    }
-
-    fn getStaticSize(&self) -> u32 {
-        return self.bitWidth;
     }
 
     fn getLLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef {

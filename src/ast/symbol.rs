@@ -9,6 +9,7 @@ use crate::ast::symbol::function::FunctionDefinitionSym;
 use crate::ast::symbol::ifstatement::IfSym;
 use crate::ast::symbol::import::ImportSym;
 use crate::ast::symbol::looptype::whileloop::WhileLoop;
+use crate::ast::symbol::printsym::PrintSym;
 use crate::ast::symbol::returnsym::ReturnSym;
 use crate::module::modulepos::ModuleRange;
 
@@ -22,6 +23,7 @@ pub mod breaksym;
 pub mod ifstatement;
 pub mod continuesym;
 pub mod returnsym;
+pub mod printsym;
 
 pub trait SymbolType: Debug {
     fn getRange(&self) -> &ModuleRange;
@@ -43,6 +45,7 @@ pub enum Symbol {
     ClassDefinition(ClassDefinitionSym),
     FunctionDefinition(FunctionDefinitionSym),
     ImportSym(ImportSym),
+    PrintSym(PrintSym),
     // expressions
     Expr(Expr),
 }
@@ -58,6 +61,7 @@ pub enum SymbolDiscriminants {
     ClassDefinition,
     FunctionDefinition,
     ImportSym,
+    PrintSym,
     FunctionCall,
     Operator,
     VariableDeclaration,
@@ -85,6 +89,7 @@ impl<'a> From<&'a Symbol> for SymbolDiscriminants {
             Symbol::ClassDefinition(_) => SymbolDiscriminants::ClassDefinition,
             Symbol::FunctionDefinition(_) => SymbolDiscriminants::FunctionDefinition,
             Symbol::ImportSym(_) => SymbolDiscriminants::ImportSym,
+            Symbol::PrintSym(_) => SymbolDiscriminants::PrintSym,
             Symbol::Expr(expr) => {
                 match expr {
                     Expr::FunctionCall(_) => SymbolDiscriminants::FunctionCall,
@@ -114,6 +119,7 @@ impl Symbol {
             Symbol::FunctionDefinition(symbol) => symbol,
             Symbol::IfSym(symbol) => symbol,
             Symbol::ImportSym(symbol) => symbol,
+            Symbol::PrintSym(symbol) => symbol,
             Symbol::Continue(symbol) => symbol,
             Symbol::While(symbol) => symbol,
             // Symbol::Loop(symbol) => symbol,

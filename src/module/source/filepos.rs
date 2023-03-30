@@ -110,8 +110,7 @@ impl FileRange {
 
     pub fn getSourceInRange(&self) -> &str {
         debug_assert!(self.getEndIndex() <= self.start.sourceFile.fileInfo.fileSource.len());
-        let startPos = self.start.index;
-        return &self.start.sourceFile.fileInfo.fileSource[startPos..startPos + self.length];
+        return &self.start.sourceFile.fileInfo.fileSource[self.getStartIndex()..self.getEndIndex()];
     }
 
     pub fn getStartIndex(&self) -> usize {
