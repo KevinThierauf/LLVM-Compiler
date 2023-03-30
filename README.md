@@ -31,5 +31,27 @@ The compiler breaks processes the source in four main stages:
    - Pass resolved syntax to LLVM for generation
    - Invoke linker to build executable from generated bitcode 
 
+## Features
+The following features are supported (though largely untested):
+ - if/else
+ - while loops
+ - functions
+ - classes
+   - supports methods + fields
+   - does not provide nontrivial constructors/destructors
+ - primitive types
+   - int, float, char, bool
+ - string type
+   - static strings only, does not support dynamic strings
+ - print
+   - can print strings, ints, or floats
+ - comments (block + line comments)
+ - arithmetic operators (+, -, *, /, %)
+   - order of operations should be correct
+   - assignment operators (+=, -=, etc.)
+ - comparison (==, !=, <, <=, >, >=)
+ - variables
+ - basic literals (int, float, string, char, bool)
+
 ## Notes
  - Windows is currently the only fully working operating system. Linux should build but fails during linking. Other operating systems will not compile.
