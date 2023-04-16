@@ -10,6 +10,7 @@ use crate::ast::symbol::expr::literal::literalinteger::LiteralInteger;
 use crate::ast::symbol::expr::literal::literalstring::LiteralString;
 use crate::ast::symbol::expr::literal::literaltuple::LiteralTuple;
 use crate::ast::symbol::expr::operatorexpr::OperatorExpr;
+use crate::ast::symbol::expr::readexpr::ReadExpr;
 use crate::ast::symbol::expr::variabledeclaration::VariableDeclarationExpr;
 use crate::ast::symbol::expr::variableexpr::VariableExpr;
 use crate::module::modulepos::ModuleRange;
@@ -19,6 +20,7 @@ pub mod functioncall;
 pub mod variableexpr;
 pub mod literal;
 pub mod variabledeclaration;
+pub mod readexpr;
 
 pub trait ExprType: 'static + SymbolType + Debug {
     fn getSymbolType(&self) -> &dyn SymbolType;
@@ -30,6 +32,7 @@ pub enum Expr {
     Operator(OperatorExpr),
     VariableDeclaration(VariableDeclarationExpr),
     Variable(VariableExpr),
+    ReadExpr(ReadExpr),
     // ConstructorCall(ConstructorCallExpr),
     LiteralArray(LiteralArray),
     LiteralBool(LiteralBool),
@@ -55,6 +58,7 @@ impl Expr {
             Expr::Operator(v) => v,
             Expr::VariableDeclaration(v) => v,
             Expr::Variable(v) => v,
+            Expr::ReadExpr(v) => v,
             Expr::LiteralArray(v) => v,
             Expr::LiteralBool(v) => v,
             Expr::LiteralChar(v) => v,

@@ -244,6 +244,7 @@ pub enum Keyword {
     // misc
     Import,
     Print,
+    Read,
     As,
 }
 

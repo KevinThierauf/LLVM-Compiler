@@ -18,6 +18,7 @@ pub mod defaultvalue;
 pub mod defaultclass;
 pub mod printstatement;
 pub mod defaultpointer;
+pub mod readexpr;
 
 static NEXT_VARIABLE_ID: AtomicUsize = AtomicUsize::new(0);
 

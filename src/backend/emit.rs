@@ -152,6 +152,14 @@ unsafe fn getAssignValue(module: &mut CompiledModule, expr: ResolvedExpr) -> LLV
 
 pub unsafe fn emitExpr(module: &mut CompiledModule, expr: ResolvedExpr) -> LLVMValueRef {
     return match expr {
+        ResolvedExpr::Read(_) => {
+            static FUNCTION: Lazy<Function> = Lazy::new(|| Function::new("sdk_read_int".to_string(), Visibility::Public, INTEGER_TYPE.to_owned(), vec![]));
+            let valueName = CString::new("readValue").unwrap();
+
+            let mut operands = vec![];
+            let (function, functionType) = getFunctionValue(module, FUNCTION.to_owned());
+            LLVMBuildCall2(module.builder, functionType, function, operands.as_mut_ptr(), operands.len() as _, valueName.as_ptr())
+        }
         ResolvedExpr::Operator(expr) => {
             let mut operands = Vec::from(expr.operands);
             debug_assert_eq!(operands.len(), expr.operator.getOperands());

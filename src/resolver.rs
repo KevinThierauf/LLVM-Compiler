@@ -670,6 +670,9 @@ fn getResolvedExpression<'a, R>(resolutionHandler: &mut ResolutionHandler, expr:
             let variableName = &expr.range.getSource();
             ResolvedExpr::Variable(resolutionHandler.scope.getVariableOrError(variableName, &mut resolutionHandler.errorVec)?)
         }
+        Expr::ReadExpr(_) => {
+            ResolvedExpr::Read(Default::default())
+        }
         Expr::LiteralBool(expr) => {
             ResolvedExpr::LiteralBool(expr.value)
         }

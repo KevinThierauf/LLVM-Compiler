@@ -7,6 +7,7 @@ use crate::resolver::resolvedast::defaultclass::DefaultClass;
 use crate::resolver::resolvedast::defaultpointer::DefaultPointer;
 use crate::resolver::resolvedast::defaultvalue::DefaultValue;
 use crate::resolver::resolvedast::functioncall::FunctionCall;
+use crate::resolver::resolvedast::readexpr::ReadExpr;
 use crate::resolver::resolvedast::resolvedoperator::ResolvedOperator;
 use crate::resolver::resolvedast::resolvedproperty::ResolvedProperty;
 use crate::resolver::resolvedast::resolvedvariable::ResolvedVariable;
@@ -58,6 +59,7 @@ impl ResolvedExprType for ResolvedExprTypeValue {
 pub enum ResolvedExpr {
     Operator(Box<ResolvedOperator>),
     FunctionCall(Box<FunctionCall>),
+    Read(ReadExpr),
     // ConstructorCall(Box<ConstructorCall>),
     VariableDeclaration(VariableDeclare),
     Variable(ResolvedVariable),
@@ -83,6 +85,10 @@ impl ResolvedExpr {
             ResolvedExpr::DefaultPointer(v) => v,
             ResolvedExpr::Variable(v) => v,
             ResolvedExpr::Property(v) => v.deref(),
+            ResolvedExpr::Read(_) => {
+                static LITERAL_RESOLVED_EXPR_TYPE: Lazy<ResolvedExprTypeValue> = Lazy::new(|| ResolvedExprTypeValue::new(INTEGER_TYPE.to_owned(), false));
+                return LITERAL_RESOLVED_EXPR_TYPE.deref();
+            }
             ResolvedExpr::LiteralBool(_) => {
                 static LITERAL_RESOLVED_EXPR_TYPE: Lazy<ResolvedExprTypeValue> = Lazy::new(|| ResolvedExprTypeValue::new(BOOLEAN_TYPE.to_owned(), false));
                 return LITERAL_RESOLVED_EXPR_TYPE.deref();

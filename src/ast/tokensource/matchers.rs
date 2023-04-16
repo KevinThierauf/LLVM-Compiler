@@ -18,6 +18,7 @@ use crate::ast::symbol::expr::literal::literalinteger::LiteralInteger;
 use crate::ast::symbol::expr::literal::literalstring::LiteralString;
 use crate::ast::symbol::expr::literal::literaltuple::LiteralTuple;
 use crate::ast::symbol::expr::operatorexpr::{OperationComponent, OperatorExpr};
+use crate::ast::symbol::expr::readexpr::ReadExpr;
 use crate::ast::symbol::expr::variabledeclaration::VariableDeclarationExpr;
 use crate::ast::symbol::expr::variableexpr::VariableExpr;
 use crate::ast::symbol::function::{FunctionAttribute, FunctionDefinitionSym, FunctionParameter};
@@ -174,6 +175,7 @@ pub fn getMatchSymbol() -> impl MatchType<Value = Symbol> {
         MatchOption::new(getMatchFunctionCallExpr(), |_, v| Ok(Symbol::Expr(Expr::FunctionCall(v)))),
         MatchOption::new(getMatchOperatorExpr(), |_, v| Ok(Symbol::Expr(Expr::Operator(v)))),
         MatchOption::new(getMatchVariableDeclarationExpr(), |_, v| Ok(Symbol::Expr(Expr::VariableDeclaration(v)))),
+        MatchOption::new(getMatchReadExpr(), |_, v| Ok(Symbol::Expr(Expr::ReadExpr(v)))),
         MatchOption::new(getMatchVariableExpr(), |_, v| Ok(Symbol::Expr(Expr::Variable(v)))),
         MatchOption::new(getMatchLiteralArray(), |_, v| Ok(Symbol::Expr(Expr::LiteralArray(v)))),
         MatchOption::new(getMatchLiteralBool(), |_, v| Ok(Symbol::Expr(Expr::LiteralBool(v)))),
@@ -212,6 +214,7 @@ pub fn getMatchExcludingExpr(excludeOperator: bool, excludeDeclaration: bool) ->
             MatchOption::new(getMatchFrom(format!("NOP"), |pos| Err(ASTError::MatchFailed(pos))), |pos, _: u8| Err(ASTError::MatchFailed(pos.getStartPos())))
         },
         MatchOption::new(getMatchVariableExpr(), |_, v| Ok(Expr::Variable(v))),
+        MatchOption::new(getMatchReadExpr(), |_, v| Ok(Expr::ReadExpr(v))),
         MatchOption::new(getMatchLiteralArray(), |_, v| Ok(Expr::LiteralArray(v))),
         MatchOption::new(getMatchLiteralBool(), |_, v| Ok(Expr::LiteralBool(v))),
         MatchOption::new(getMatchLiteralChar(), |_, v| Ok(Expr::LiteralChar(v))),
@@ -656,6 +659,20 @@ pub fn getMatchVariableExpr() -> impl MatchType<Value = VariableExpr> {
     return getMappedMatch(getMatchIdentifier(), |range, _| Ok(VariableExpr {
         range,
     }));
+}
+
+pub fn getMatchReadExpr() -> impl MatchType<Value = ReadExpr> {
+    // read()
+    return getMappedMatch(
+        (
+            getMatchKeyword(Keyword::Read),
+            getMatchParenthesis(ParenthesisType::Rounded, |_| {
+                Ok(())
+            })
+        ), |range, _| Ok(ReadExpr {
+            range,
+        }),
+    );
 }
 
 pub fn getMatchLiteralArray() -> impl MatchType<Value = LiteralArray> {
